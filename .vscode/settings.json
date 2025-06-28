@@ -1,0 +1,6 @@
+{
+  "search.exclude": {
+    "pnpm-lock.yaml": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
