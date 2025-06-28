@@ -105,8 +105,5 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "volta": {
-    "node": "22.14.0"
-  },
   "packageManager": "pnpm@10.11.0"
 }
