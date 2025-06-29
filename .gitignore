@@ -5,5 +5,4 @@ node_modules
 tests/*/dist
 tests/*/pnpm-lock.yaml
 
-# Webstorm
-.idea
+.tasks
