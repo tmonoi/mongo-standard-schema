@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "papr": "file:../../build/package",
+    "mongo-standard-schema": "file:../../build/package",
     "mongodb": "6.10.0"
   }
 }

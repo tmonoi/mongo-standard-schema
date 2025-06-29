@@ -14,6 +14,9 @@ importers:
       '@eslint/js':
         specifier: 9.28.0
         version: 9.28.0
+      '@standard-schema/spec':
+        specifier: 1.0.0
+        version: 1.0.0
       '@types/node':
         specifier: 22.14.0
         version: 22.14.0
@@ -89,6 +92,9 @@ importers:
       typescript-eslint:
         specifier: 8.20.0
         version: 8.20.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.7.3)
+      zod:
+        specifier: 3.25.67
+        version: 3.25.67
 
 packages:
 
@@ -366,6 +372,9 @@ packages:
   '@sindresorhus/is@0.14.0':
     resolution: {integrity: sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==}
     engines: {node: '>=6'}
+
+  '@standard-schema/spec@1.0.0':
+    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
   '@szmarczak/http-timer@1.1.2':
     resolution: {integrity: sha512-XIB2XbzHTN6ieIjfIMV9hlVcfPU26s2vafYWQcZHWXHOxiaRZYEDKEwdl129Zyg50+foYV2jCgtrqSA6qNuNSA==}
@@ -3076,6 +3085,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@3.25.67:
+    resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
+
 snapshots:
 
   '@babel/code-frame@7.27.1':
@@ -3270,6 +3282,8 @@ snapshots:
   '@rtsao/scc@1.1.0': {}
 
   '@sindresorhus/is@0.14.0': {}
+
+  '@standard-schema/spec@1.0.0': {}
 
   '@szmarczak/http-timer@1.1.2':
     dependencies:
@@ -6245,3 +6259,5 @@ snapshots:
   yn@3.1.1: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.67: {}

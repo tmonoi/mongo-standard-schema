@@ -13,11 +13,6 @@ rm -f package-lock.json
 pnpm install
 cd ../..
 
-cd tests/cjs/
-rm -f package-lock.json
-pnpm install
-cd ../..
-
 cd tests/ts/
 rm -f package-lock.json
 rm -f ./dist/*

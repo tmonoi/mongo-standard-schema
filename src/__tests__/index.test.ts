@@ -46,7 +46,7 @@ describe('index', () => {
   describe('initialize and model', () => {
     // Module mocking in node.js is experimental and the types are not yet available
     let modelMock: any; // MockModuleContext
-    let Papr: any;
+    let Client: any;
     let model: any;
 
     before(async () => {
@@ -58,7 +58,7 @@ describe('index', () => {
       });
       console.log('modelMock', modelMock);
 
-      Papr = (await import('../index')).default;
+      Client = (await import('../index')).default;
       model = await import('../model');
     });
 
@@ -67,27 +67,27 @@ describe('index', () => {
     });
 
     test('initialize with no models registered', async (t) => {
-      const papr = new Papr();
+      const client = new Client();
 
-      papr.initialize(db);
+      client.initialize(db);
 
       strictEqual(model.build.mock.callCount(), 0);
     });
 
     test('define model without db', async () => {
-      const papr = new Papr();
+      const client = new Client();
 
-      papr.model('testcollection', testSchema1);
+      client.model('testcollection', testSchema1);
 
       strictEqual(model.build.mock.callCount(), 0);
     });
 
     test('register model and initialize afterwards', () => {
       const options = { maxTime: 1000 };
-      const papr = new Papr(options);
+      const client = new Client(options);
 
-      papr.model(COLLECTION, testSchema1);
-      papr.initialize(db);
+      client.model(COLLECTION, testSchema1);
+      client.initialize(db);
 
       expectToBeCalledOnceWith(model.build, [
         testSchema1,

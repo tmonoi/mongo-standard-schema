@@ -1,5 +1,5 @@
 import { types, schema } from '../src';
-import papr from './papr';
+import client from './papr';
 
 const userSchema = schema(
   {
@@ -26,6 +26,6 @@ const userSchema = schema(
 
 export type UserDocument = (typeof userSchema)[0];
 
-const User = papr.model('users', userSchema);
+const User = client.model('users', userSchema);
 
 export default User;

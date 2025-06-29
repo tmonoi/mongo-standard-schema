@@ -59,37 +59,37 @@ describe('index', () => {
   });
 
   describe('updateSchema', () => {
-    let Papr: any;
+    let Client: any;
 
     before(async () => {
-      Papr = (await import('../index')).default;
+      Client = (await import('../index')).default;
     });
 
     test('no db', async () => {
-      const papr = new Papr();
+      const client = new Client();
 
-      const testModel = papr.model(COLLECTION, testSchema1);
+      const testModel = client.model(COLLECTION, testSchema1);
 
-      await rejects(papr.updateSchema(testModel), /DB/);
+      await rejects(client.updateSchema(testModel), /DB/);
     });
 
     test('no collection on model', async () => {
-      const papr = new Papr();
+      const client = new Client();
 
-      const testModel = papr.model(COLLECTION, testSchema1);
+      const testModel = client.model(COLLECTION, testSchema1);
 
-      papr.db = db;
+      client.db = db;
 
-      return rejects(papr.updateSchema(testModel), /collection/);
+      return rejects(client.updateSchema(testModel), /collection/);
     });
 
     test.only('new collection', async () => {
-      const papr = new Papr();
+      const client = new Client();
 
-      const testModel = papr.model(COLLECTION, testSchema1);
-      papr.initialize(db);
+      const testModel = client.model(COLLECTION, testSchema1);
+      client.initialize(db);
 
-      await papr.updateSchema(testModel);
+      await client.updateSchema(testModel);
 
       expectToBeCalledOnceWith(db.createCollection, [
         COLLECTION,
@@ -118,12 +118,12 @@ describe('index', () => {
     test('existing collection', async () => {
       db.collections = mock.fn(() => Promise.resolve([collection]));
 
-      const papr = new Papr();
+      const client = new Client();
 
-      const testModel = papr.model(COLLECTION, testSchema2);
-      papr.initialize(db);
+      const testModel = client.model(COLLECTION, testSchema2);
+      client.initialize(db);
 
-      await papr.updateSchema(testModel);
+      await client.updateSchema(testModel);
 
       expectToBeCalledOnceWith(db.command, [
         {
@@ -157,13 +157,13 @@ describe('index', () => {
         { times: 1 }
       );
 
-      const papr = new Papr();
+      const client = new Client();
 
-      papr.model(COLLECTION, testSchema1);
-      papr.model(COLLECTION_OTHER, testSchema2);
-      papr.initialize(db);
+      client.model(COLLECTION, testSchema1);
+      client.model(COLLECTION_OTHER, testSchema2);
+      client.initialize(db);
 
-      await papr.updateSchemas();
+      await client.updateSchemas();
 
       strictEqual(db.createCollection.mock.callCount(), 2);
       deepStrictEqual(db.createCollection.mock.calls[0].arguments, [

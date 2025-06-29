@@ -59,6 +59,7 @@
     "watch:types": "tsc --watch"
   },
   "devDependencies": {
+    "@standard-schema/spec": "1.0.0",
     "@eslint/eslintrc": "3.3.1",
     "@eslint/js": "9.28.0",
     "@types/node": "22.14.0",
@@ -85,9 +86,11 @@
     "ts-node": "10.9.2",
     "tsx": "4.19.2",
     "typescript": "5.7.3",
-    "typescript-eslint": "8.20.0"
+    "typescript-eslint": "8.20.0",
+    "zod": "3.25.67"
   },
   "peerDependencies": {
+    "@standard-schema/spec": "1.0.0",
     "mongodb": "^6.0.0"
   },
   "lint-staged": {

@@ -4,7 +4,7 @@ import { SchemaOptions } from './schema';
 import types from './types';
 import { BaseSchema, ModelOptions } from './utils';
 
-export default class Papr {
+export default class Client {
   db?: Db;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   models: Map<string, Model<any, any>> = new Map<string, Model<any, any>>();
@@ -13,20 +13,20 @@ export default class Papr {
   schemas: Map<string, [BaseSchema, any]> = new Map<string, [BaseSchema, any]>();
 
   /**
-   * Returns a new instance of `Papr`.
+   * Returns a new instance of `Client`.
    *
    * It may be called with some options for before and after [hooks](api/hooks.md) and a maximum execution time for queries.
    *
-   * @name Papr
+   * @name Client
    *
    * @param [options] {ModelOptions}
    * @param [options.hooks] {Hooks}
    * @param [options.maxTime] {number}
    *
    * @example
-   * const papr = new Papr();
+   * const client = new Client();
    *
-   * const paprWithOptions = new Papr({
+   * const clientWithOptions = new Client({
    *   hooks: {
    *     after: [afterHook],
    *     before: [beforeHook]
@@ -48,7 +48,7 @@ export default class Papr {
    *
    * const connection = await MongoClient.connect('mongodb://localhost:27017');
    *
-   * papr.initialize(connection.db('test'));
+   * client.initialize(connection.db('test'));
    */
   initialize(db: Db): void {
     if (this.db) {
@@ -75,7 +75,7 @@ export default class Papr {
    * @returns {Model<TSchema, TOptions>}
    *
    * @example
-   * const User = papr.model('users', userSchema);
+   * const User = client.model('users', userSchema);
    */
   model<TSchema extends BaseSchema, TOptions extends SchemaOptions<TSchema>>(
     collectionName: string,
@@ -105,7 +105,7 @@ export default class Papr {
    * @returns {Promise<void>}
    *
    * @example
-   * await papr.updateSchema(User);
+   * await client.updateSchema(User);
    */
   async updateSchema<TSchema extends BaseSchema, TOptions extends SchemaOptions<TSchema>>(
     model: Model<TSchema, TOptions>
@@ -161,7 +161,7 @@ export default class Papr {
    * @returns {Promise<void>}
    *
    * @example
-   * await papr.updateSchemas();
+   * await client.updateSchemas();
    */
   async updateSchemas(): Promise<void> {
     if (!this.db) {
@@ -180,4 +180,5 @@ export * from './hooks';
 export * from './model';
 export * from './mongodbTypes';
 export * from './schema';
+export * from './standardSchema';
 export * from './utils';

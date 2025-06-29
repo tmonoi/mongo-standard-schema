@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { MongoClient, ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import Papr, { schema, types } from 'papr';
+import Papr, { schema, types } from 'mongo-standard-schema';
 
 const COLLECTION = 'samples';
 const DB = 'esm';

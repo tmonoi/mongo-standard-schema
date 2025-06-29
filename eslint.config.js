@@ -199,15 +199,6 @@ export default typescriptEslint.config(
     },
   },
 
-  // CommonJS files
-  {
-    files: ['tests/cjs/*.js'],
-    rules: {
-      '@typescript-eslint/no-require-imports': 'off',
-      '@typescript-eslint/no-var-requires': 'off',
-    },
-  },
-
   {
     // prettier-ignore
     ignores: [

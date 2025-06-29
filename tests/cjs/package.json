@@ -1,7 +1,0 @@
-{
-  "type": "commonjs",
-  "dependencies": {
-    "papr": "file:../../build/package",
-    "mongodb": "6.10.0"
-  }
-}

@@ -3,13 +3,13 @@ import assert from 'assert';
 import { MongoClient, ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { expectType } from 'ts-expect';
-import Papr, { schema, types } from 'papr';
+import Client, { schema, types } from 'mongo-standard-schema';
 
 const COLLECTION = 'samples';
 const DB = 'ts';
 
 let connection: MongoClient;
-let papr: Papr;
+let client: Client;
 let mongoServer: MongoMemoryServer;
 
 async function setup(): Promise<void> {
@@ -24,8 +24,8 @@ async function setup(): Promise<void> {
 
   await db.collection(COLLECTION).deleteMany({});
 
-  papr = new Papr();
-  papr.initialize(db);
+  client = new Client();
+  client.initialize(db);
 }
 
 async function run(): Promise<void> {
@@ -41,9 +41,9 @@ async function run(): Promise<void> {
     }
   );
 
-  const Sample = papr.model(COLLECTION, sampleSchema);
+  const Sample = client.model(COLLECTION, sampleSchema);
 
-  await papr.updateSchemas();
+  await client.updateSchemas();
 
   assert.ok(Sample);
   assert.strictEqual(typeof Sample.find, 'function');
