@@ -97,10 +97,6 @@
     "*.{js,mjs,ts}": [
       "eslint --fix",
       "prettier --write --list-different"
-    ],
-    "src/*.ts": [
-      "node docs/build.js",
-      "git add docs/"
     ]
   },
   "prettier": {
