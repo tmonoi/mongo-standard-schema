@@ -30,8 +30,8 @@ export type NestedPaths<T> = T extends object
           ? `${K}` | `${K}.${NestedPaths<T[K]>}`
           : never
         : K extends string
-        ? `${K}`
-        : never;
+          ? `${K}`
+          : never;
     }[keyof T]
   : never;
 
@@ -41,10 +41,10 @@ export type NestedPaths<T> = T extends object
 export type NestedPropertyType<T, P extends string> = P extends keyof T
   ? T[P]
   : P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? NestedPropertyType<T[K], Rest>
-    : never
-  : never;
+    ? K extends keyof T
+      ? NestedPropertyType<T[K], Rest>
+      : never
+    : never;
 
 /**
  * Flatten nested object types for dot notation

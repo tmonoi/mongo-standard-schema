@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/adapters/index.ts'],
@@ -16,6 +16,6 @@ export default defineConfig({
   skipNodeModulesBundle: true,
   platform: 'node',
   esbuildOptions(options) {
-    options.conditions = ['node']
-  }
-})
+    options.conditions = ['node'];
+  },
+});

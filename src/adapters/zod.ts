@@ -35,7 +35,7 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
    * Static factory method to create ZodAdapter from Zod schema
    */
   static create<TInput, TOutput = TInput>(
-    schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>
+    schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
   ): ZodAdapter<TInput, TOutput> {
     return new ZodAdapter(schema);
   }
@@ -45,7 +45,7 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
  * Helper function to create ZodAdapter
  */
 export function zodAdapter<TInput, TOutput = TInput>(
-  schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>
+  schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
 ): ZodAdapter<TInput, TOutput> {
   return ZodAdapter.create(schema);
 }

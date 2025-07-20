@@ -1,4 +1,4 @@
-import type { WithId, NumericType, FlattenObject } from './utils.js';
+import type { FlattenObject, NumericType, WithId } from './utils.js';
 
 /**
  * Extract only fields of specific type

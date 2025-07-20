@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { MongoClient } from 'mongodb';
-import { Client } from '../../src/index.js';
+import type { MongoClient } from 'mongodb';
+import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
+import { Client } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
   let mongoClient: MongoClient;
@@ -11,7 +11,7 @@ describe('Sample Code Integration', () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
     client = Client.initialize(testDb);
-    
+
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
     for (const collection of collections) {
@@ -27,7 +27,7 @@ describe('Sample Code Integration', () => {
         _id: z.string(),
         name: z.string(),
         age: z.number(),
-      })
+      }),
     );
 
     // Test insertOne - _id should be optional
@@ -59,10 +59,7 @@ describe('Sample Code Integration', () => {
     expect(foundById?._id).toBe(doc1._id);
 
     // Test updateOne
-    const updateResult = await User.updateOne(
-      { _id: doc1._id },
-      { $set: { age: 21 } }
-    );
+    const updateResult = await User.updateOne({ _id: doc1._id }, { $set: { age: 21 } });
     expect(updateResult.modifiedCount).toBe(1);
 
     // Verify update
@@ -70,10 +67,7 @@ describe('Sample Code Integration', () => {
     expect(updatedDoc?.age).toBe(21);
 
     // Test findOneAndUpdate
-    const doc2 = await User.findOneAndUpdate(
-      { _id: doc1._id },
-      { $set: { name: 'John Doe' } }
-    );
+    const doc2 = await User.findOneAndUpdate({ _id: doc1._id }, { $set: { name: 'John Doe' } });
     expect(doc2).toBeDefined();
     expect(doc2?.name).toBe('John Doe');
     expect(doc2?.age).toBe(21);
@@ -94,7 +88,7 @@ describe('Sample Code Integration', () => {
         _id: z.string(),
         name: z.string(),
         age: z.number(),
-      })
+      }),
     );
 
     // Test validation failure
@@ -102,7 +96,7 @@ describe('Sample Code Integration', () => {
       User.insertOne({
         name: 'John',
         age: 'invalid' as any, // Should fail validation
-      })
+      }),
     ).rejects.toThrow();
 
     // Test successful validation
@@ -121,7 +115,7 @@ describe('Sample Code Integration', () => {
         _id: z.string(),
         name: z.string(),
         age: z.number(),
-      })
+      }),
     );
 
     // Test insertMany
@@ -150,10 +144,7 @@ describe('Sample Code Integration', () => {
     expect(count).toBe(3);
 
     // Test updateMany
-    const updateResult = await User.updateMany(
-      { age: { $gte: 30 } },
-      { $inc: { age: 1 } }
-    );
+    const updateResult = await User.updateMany({ age: { $gte: 30 } }, { $inc: { age: 1 } });
     expect(updateResult.modifiedCount).toBe(2);
 
     // Test deleteMany

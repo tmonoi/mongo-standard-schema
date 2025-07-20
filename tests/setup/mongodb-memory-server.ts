@@ -1,6 +1,6 @@
+import { type Db, MongoClient } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { MongoClient, Db } from 'mongodb';
-import { beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll } from 'vitest';
 
 let mongod: MongoMemoryServer;
 let mongoClient: MongoClient;

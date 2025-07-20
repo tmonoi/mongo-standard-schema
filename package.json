@@ -18,9 +18,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -34,15 +32,7 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build && npm run test:run"
   },
-  "keywords": [
-    "mongodb",
-    "typescript",
-    "schema",
-    "validation",
-    "zod",
-    "type-safe",
-    "database"
-  ],
+  "keywords": ["mongodb", "typescript", "schema", "validation", "zod", "type-safe", "database"],
   "author": "tmonoi",
   "license": "MIT",
   "engines": {

@@ -78,17 +78,12 @@
     "indentWidth": 2,
     "lineWidth": 100,
     "lineEnding": "lf",
-    "ignore": [
-      "dist/**",
-      "node_modules/**",
-      "coverage/**"
-    ]
+    "ignore": ["dist/**", "node_modules/**", "coverage/**"]
   },
   "javascript": {
     "formatter": {
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
-      "trailingComma": "es5",
       "semicolons": "always",
       "arrowParentheses": "always",
       "bracketSpacing": true,
@@ -103,17 +98,7 @@
     }
   },
   "files": {
-    "include": [
-      "src/**/*.ts",
-      "tests/**/*.ts",
-      "*.ts",
-      "*.js",
-      "*.json"
-    ],
-    "ignore": [
-      "dist/**",
-      "node_modules/**",
-      "coverage/**"
-    ]
+    "include": ["src/**/*.ts", "tests/**/*.ts", "*.ts", "*.js", "*.json"],
+    "ignore": ["dist/**", "node_modules/**", "coverage/**"]
   }
 }

@@ -1,4 +1,4 @@
-import type { WithId, FlattenObject } from './utils.js';
+import type { FlattenObject, WithId } from './utils.js';
 
 /**
  * MongoDB comparison operators
@@ -35,7 +35,7 @@ export interface PaprRootFilterOperators<T> {
  * MongoDB array operators
  */
 export interface PaprArrayFilterOperators<T> {
-  '$'?: PaprFilter<T>;
+  $?: PaprFilter<T>;
   '$[]'?: PaprFilter<T>;
 }
 

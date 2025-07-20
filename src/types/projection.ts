@@ -1,4 +1,4 @@
-import type { WithId, NestedPaths } from './utils.js';
+import type { NestedPaths, WithId } from './utils.js';
 
 /**
  * MongoDB projection operators
@@ -32,7 +32,7 @@ export type ProjectionResult<TSchema, TProjection> = TProjection extends Record<
           ? never
           : WithId<TSchema>[K]
         : TProjection extends Record<string, 1 | true>
-        ? never
-        : WithId<TSchema>[K];
+          ? never
+          : WithId<TSchema>[K];
     }
   : WithId<TSchema>;
