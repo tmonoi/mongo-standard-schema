@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { Client } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
-  let mongoClient: MongoClient;
   let client: Client;
 
   beforeEach(async () => {
@@ -44,7 +43,6 @@ describe('Sample Code Integration', () => {
 
     // Test findOne
     const foundDoc = await User.findOne({ name: 'John' });
-    console.log('foundDoc result:', foundDoc);
     expect(foundDoc).toBeDefined();
     expect(foundDoc?.name).toBe('John');
     expect(foundDoc?.age).toBe(20);
@@ -52,8 +50,6 @@ describe('Sample Code Integration', () => {
 
     // Test findById
     const foundById = await User.findById(doc1._id);
-    console.log('foundById result:', foundById);
-    console.log('doc1._id:', doc1._id);
     expect(foundById).toBeDefined();
     expect(foundById?.name).toBe('John');
     expect(foundById?._id).toBe(doc1._id);
