@@ -104,6 +104,99 @@ describe('Sample Code Integration', () => {
     expect(validDoc.age).toBe(25);
   });
 
+  test('should provide proper TypeScript type checking', async () => {
+    const User = client.model(
+      'users',
+      z.object({
+        _id: z.string(),
+        name: z.string(),
+        age: z.number(),
+        email: z.string().optional(),
+      }),
+    );
+
+    // ✅ Valid insertOne calls - should not cause TypeScript errors
+    const validUser1 = await User.insertOne({
+      name: 'John',
+      age: 30,
+    });
+    expect(validUser1.name).toBe('John');
+    expect(validUser1.age).toBe(30);
+    expect(typeof validUser1._id).toBe('string');
+
+    const validUser2 = await User.insertOne({
+      name: 'Jane',
+      age: 25,
+      email: 'jane@example.com',
+    });
+    expect(validUser2.email).toBe('jane@example.com');
+
+    // ❌ Invalid insertOne calls - should cause TypeScript errors and runtime validation errors
+    // @ts-expect-error - missing required field 'name'
+    await expect(User.insertOne({
+      age: 30,
+    })).rejects.toThrow();
+
+    // @ts-expect-error - missing required field 'age'
+    await expect(User.insertOne({
+      name: 'Bob',
+    })).rejects.toThrow();
+
+    await expect(User.insertOne({
+      name: 'Alice',
+      // @ts-expect-error - wrong type for 'age'
+      age: 'thirty',
+    })).rejects.toThrow();
+
+    // @ts-expect-error - wrong type for 'name'
+    await expect(User.insertOne({
+      name: 123,
+      age: 30,
+    })).rejects.toThrow();
+
+    // ✅ Valid findOne calls
+    const foundUser = await User.findOne({ name: 'John' });
+    if (foundUser) {
+      expect(typeof foundUser._id).toBe('string');
+      expect(typeof foundUser.name).toBe('string');
+      expect(typeof foundUser.age).toBe('number');
+    }
+
+    // ❌ Invalid findOne calls - should cause TypeScript errors
+    // @ts-expect-error - wrong type for filter
+    await expect(User.findOne({ age: 'thirty' })).rejects.toThrow();
+
+    // @ts-expect-error - non-existent field
+    // Note: MongoDB allows queries with non-existent fields, so this returns null instead of throwing
+    const nonExistentResult = await User.findOne({ nonExistentField: 'value' });
+    expect(nonExistentResult).toBeNull();
+
+    // ✅ Valid updateOne calls
+    await User.updateOne(
+      { name: 'John' },
+      { $set: { age: 31 } }
+    );
+
+    // ❌ Invalid updateOne calls - should cause TypeScript errors
+    // @ts-expect-error - wrong type in $set
+    await User.updateOne(
+      { name: 'John' },
+      { $set: { age: 'thirty-one' } }
+    );
+
+    // @ts-expect-error - non-existent field in $set
+    await User.updateOne(
+      { name: 'John' },
+      { $set: { nonExistentField: 'value' } }
+    );
+
+    // @ts-expect-error - wrong type in filter
+    await User.updateOne(
+      { age: 'thirty' },
+      { $set: { name: 'Johnny' } }
+    );
+  });
+
   test('should handle multiple documents', async () => {
     const User = client.model(
       'users',

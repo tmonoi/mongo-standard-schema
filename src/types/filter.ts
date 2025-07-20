@@ -40,16 +40,19 @@ export interface PaprArrayFilterOperators<T> {
 }
 
 /**
- * Main filter type that combines all MongoDB filter operations
+ * Strict field filter that only allows existing fields
  */
-export type PaprFilter<TSchema> =
-  | Partial<WithId<TSchema>>
-  | (PaprFilterConditions<WithId<TSchema>> & PaprRootFilterOperators<WithId<TSchema>>)
-  | {
-      [K in keyof FlattenObject<WithId<TSchema>>]?:
-        | FlattenObject<WithId<TSchema>>[K]
-        | PaprFilterConditions<FlattenObject<WithId<TSchema>>[K]>;
-    };
+export type StrictFieldFilter<TSchema> = {
+  [K in keyof WithId<TSchema>]?:
+    | WithId<TSchema>[K]
+    | PaprFilterConditions<WithId<TSchema>[K]>;
+};
+
+/**
+ * Main filter type that combines all MongoDB filter operations
+ * This version is more strict and only allows existing fields
+ */
+export type PaprFilter<TSchema> = StrictFieldFilter<TSchema> & PaprRootFilterOperators<WithId<TSchema>>;
 
 /**
  * Filter type for array elements

@@ -8,10 +8,11 @@ export type OnlyFieldsOfType<T, U> = {
 }[keyof T];
 
 /**
- * Match keys and values for update operations
+ * Match keys and values for update operations - strict version
+ * Only allows existing fields from the schema
  */
 export type PaprMatchKeysAndValues<T> = {
-  [K in keyof FlattenObject<T>]?: FlattenObject<T>[K];
+  [K in keyof T]?: T[K];
 };
 
 /**

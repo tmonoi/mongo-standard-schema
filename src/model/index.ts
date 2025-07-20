@@ -21,6 +21,7 @@ import { ObjectId } from 'mongodb';
 import type { SchemaAdapter } from '../adapters/base.js';
 import type {
   OptionalId,
+  StrictOptionalId,
   PaprFilter,
   PaprProjection,
   PaprUpdateFilter,
@@ -50,7 +51,7 @@ export class Model<TInput, TOutput = TInput> {
   /**
    * Insert a single document
    */
-  async insertOne(doc: OptionalId<TInput>, options?: InsertOneOptions): Promise<WithId<TOutput>> {
+  async insertOne(doc: StrictOptionalId<TInput>, options?: InsertOneOptions): Promise<WithId<TOutput>> {
     // If _id is provided, validate with it; otherwise, let MongoDB generate it
     if (doc._id) {
       // User provided _id, validate the full document
@@ -84,7 +85,7 @@ export class Model<TInput, TOutput = TInput> {
    * Insert multiple documents
    */
   async insertMany(
-    docs: OptionalId<TInput>[],
+    docs: StrictOptionalId<TInput>[],
     options?: BulkWriteOptions,
   ): Promise<WithId<TOutput>[]> {
     // Generate _ids and validate documents
