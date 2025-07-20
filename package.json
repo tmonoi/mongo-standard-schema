@@ -1,0 +1,74 @@
+{
+  "name": "mongo-standard-schema",
+  "version": "1.0.0",
+  "description": "Type-safe MongoDB client library with support for multiple validation libraries",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/index.d.ts",
+      "import": "./dist/adapters/index.js",
+      "require": "./dist/adapters/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --apply .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:run"
+  },
+  "keywords": [
+    "mongodb",
+    "typescript",
+    "schema",
+    "validation",
+    "zod",
+    "type-safe",
+    "database"
+  ],
+  "author": "tmonoi",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "mongodb": "^5.0.0 || ^6.0.0",
+    "zod": "^3.20.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.4.1",
+    "@types/node": "^20.10.0",
+    "mongodb": "^6.3.0",
+    "mongodb-memory-server": "^9.1.4",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "zod": "^3.22.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmonoi/mongo-standard-schema.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tmonoi/mongo-standard-schema/issues"
+  },
+  "homepage": "https://github.com/tmonoi/mongo-standard-schema#readme",
+  "packageManager": "pnpm@10.12.4"
+}
