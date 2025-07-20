@@ -24,16 +24,17 @@ export function isValidObjectId(id: string): boolean {
 /**
  * Convert _id field from string to ObjectId for MongoDB operations
  */
-export function convertIdForMongo(doc: any): any {
+export function convertIdForMongo<T>(doc: T): T {
   if (!doc || typeof doc !== 'object') {
     return doc;
   }
 
-  if ('_id' in doc && typeof doc._id === 'string') {
+  const docRecord = doc as Record<string, unknown>;
+  if ('_id' in docRecord && typeof docRecord._id === 'string') {
     return {
-      ...doc,
-      _id: stringToObjectId(doc._id),
-    };
+      ...docRecord,
+      _id: stringToObjectId(docRecord._id),
+    } as T;
   }
   return doc;
 }
@@ -41,16 +42,17 @@ export function convertIdForMongo(doc: any): any {
 /**
  * Convert _id field from ObjectId to string for user-facing operations
  */
-export function convertIdFromMongo(doc: any): any {
+export function convertIdFromMongo<T>(doc: T): T {
   if (!doc || typeof doc !== 'object') {
     return doc;
   }
 
-  if ('_id' in doc && doc._id instanceof ObjectId) {
+  const docRecord = doc as Record<string, unknown>;
+  if ('_id' in docRecord && docRecord._id instanceof ObjectId) {
     return {
-      ...doc,
-      _id: objectIdToString(doc._id),
-    };
+      ...docRecord,
+      _id: objectIdToString(docRecord._id),
+    } as T;
   }
   return doc;
 }

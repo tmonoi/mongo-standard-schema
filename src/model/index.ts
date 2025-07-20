@@ -14,6 +14,8 @@ import type {
   InsertOneResult,
   UpdateOptions,
   UpdateResult,
+  UpdateFilter,
+  Document,
 } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import type { SchemaAdapter } from '../adapters/base.js';
@@ -56,7 +58,7 @@ export class Model<TInput, TOutput = TInput> {
       const validatedDoc = this.adapter.parse(docWithId);
       const mongoDoc = convertIdForMongo(validatedDoc);
 
-      const result = await this.collection.insertOne(mongoDoc, options);
+      const result = await this.collection.insertOne(mongoDoc as Document, options);
 
       return {
         ...validatedDoc,
@@ -65,7 +67,7 @@ export class Model<TInput, TOutput = TInput> {
     }
 
     // No _id provided, let MongoDB generate it
-    const result = await this.collection.insertOne(doc as any, options);
+    const result = await this.collection.insertOne(doc as Record<string, unknown>, options);
 
     // Now validate with the generated _id
     const docWithGeneratedId = {
@@ -97,7 +99,7 @@ export class Model<TInput, TOutput = TInput> {
     const mongoDocs = validatedDocs.map((doc) => convertIdForMongo(doc));
 
     // Insert into MongoDB
-    const result = await this.collection.insertMany(mongoDocs, options);
+    const result = await this.collection.insertMany(mongoDocs as Document[], options);
 
     // Return the inserted documents with string _ids
     return validatedDocs.map((doc, index) => ({
@@ -130,7 +132,7 @@ export class Model<TInput, TOutput = TInput> {
    */
   async findById(id: string, options?: FindOptions): Promise<WithId<TOutput> | null> {
     // Try both string and ObjectId formats to handle different storage scenarios
-    const stringResult = await this.collection.findOne({ _id: id as any }, options);
+    const stringResult = await this.collection.findOne({ _id: id } as Document, options);
     if (stringResult) {
       const docWithStringId = convertIdFromMongo(stringResult);
       return this.adapter.parse(docWithStringId) as WithId<TOutput>;
@@ -154,7 +156,7 @@ export class Model<TInput, TOutput = TInput> {
     const cursor = this.collection.find(mongoFilter, options);
     const results = await cursor.toArray();
 
-    return results.map((doc: any) => {
+    return results.map((doc: Record<string, unknown>) => {
       const docWithStringId = convertIdFromMongo(doc);
       return this.adapter.parse(docWithStringId) as WithId<TOutput>;
     });
@@ -179,16 +181,20 @@ export class Model<TInput, TOutput = TInput> {
     // Handle _id field specially to support both string and ObjectId formats
     if ('_id' in filter && typeof filter._id === 'string') {
       // Try string format first
-      let result = await this.collection.updateOne({ _id: filter._id }, update as any, options);
+      let result = await this.collection.updateOne({ _id: filter._id }, update as UpdateFilter<Document>, options);
       if (result.matchedCount === 0) {
         // If no match, try ObjectId format
-        result = await this.collection.updateOne({ _id: stringToObjectId(filter._id) }, update as any, options);
+        result = await this.collection.updateOne(
+          { _id: stringToObjectId(filter._id) },
+          update as UpdateFilter<Document>,
+          options,
+        );
       }
       return result;
     }
-    
+
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.updateOne(mongoFilter, update as any, options);
+    return this.collection.updateOne(mongoFilter, update as UpdateFilter<Document>, options);
   }
 
   /**
@@ -200,7 +206,7 @@ export class Model<TInput, TOutput = TInput> {
     options?: UpdateOptions,
   ): Promise<UpdateResult> {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.updateMany(mongoFilter, update as any, options);
+    return this.collection.updateMany(mongoFilter, update as UpdateFilter<Document>, options);
   }
 
   /**
@@ -214,18 +220,22 @@ export class Model<TInput, TOutput = TInput> {
     // Handle _id field specially to support both string and ObjectId formats
     if ('_id' in filter && typeof filter._id === 'string') {
       // Try string format first
-      let result = await this.collection.findOneAndUpdate({ _id: filter._id }, update as any, {
+      let result = await this.collection.findOneAndUpdate({ _id: filter._id }, update as UpdateFilter<Document>, {
         returnDocument: 'after',
         ...options,
       });
       if (!result) {
         // If no match, try ObjectId format
-        result = await this.collection.findOneAndUpdate({ _id: stringToObjectId(filter._id) }, update as any, {
-          returnDocument: 'after',
-          ...options,
-        });
+        result = await this.collection.findOneAndUpdate(
+          { _id: stringToObjectId(filter._id) },
+          update as UpdateFilter<Document>,
+          {
+            returnDocument: 'after',
+            ...options,
+          },
+        );
       }
-      
+
       if (!result) {
         return null;
       }
@@ -233,9 +243,9 @@ export class Model<TInput, TOutput = TInput> {
       const docWithStringId = convertIdFromMongo(result);
       return this.adapter.parse(docWithStringId) as WithId<TOutput>;
     }
-    
+
     const mongoFilter = convertFilterForMongo(filter);
-    const result = await this.collection.findOneAndUpdate(mongoFilter, update as any, {
+    const result = await this.collection.findOneAndUpdate(mongoFilter, update as UpdateFilter<Document>, {
       returnDocument: 'after',
       ...options,
     });
@@ -262,7 +272,7 @@ export class Model<TInput, TOutput = TInput> {
       }
       return result;
     }
-    
+
     const mongoFilter = convertFilterForMongo(filter);
     return this.collection.deleteOne(mongoFilter, options);
   }
