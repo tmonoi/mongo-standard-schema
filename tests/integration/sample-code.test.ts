@@ -91,7 +91,8 @@ describe('Sample Code Integration', () => {
     await expect(
       User.insertOne({
         name: 'John',
-        age: 'invalid' as any, // Should fail validation
+        // @ts-expect-error - wrong type for 'age'
+        age: 'invalid',
       }),
     ).rejects.toThrow();
 
@@ -148,10 +149,11 @@ describe('Sample Code Integration', () => {
       age: 'thirty',
     })).rejects.toThrow();
 
-    // @ts-expect-error - wrong type for 'name'
     await expect(User.insertOne({
+      // @ts-expect-error - wrong type for 'name'
       name: 123,
       age: 30,
+      email: undefined,
     })).rejects.toThrow();
 
     // ✅ Valid findOne calls
@@ -177,21 +179,20 @@ describe('Sample Code Integration', () => {
       { $set: { age: 31 } }
     );
 
-    // ❌ Invalid updateOne calls - should cause TypeScript errors
-    // @ts-expect-error - wrong type in $set
     await User.updateOne(
       { name: 'John' },
+      // @ts-expect-error - wrong type for 'age'
       { $set: { age: 'thirty-one' } }
     );
 
-    // @ts-expect-error - non-existent field in $set
     await User.updateOne(
       { name: 'John' },
+      // @ts-expect-error - wrong type for 'nonExistentField'
       { $set: { nonExistentField: 'value' } }
     );
 
-    // @ts-expect-error - wrong type in filter
     await User.updateOne(
+      // @ts-expect-error - wrong type for 'age'
       { age: 'thirty' },
       { $set: { name: 'Johnny' } }
     );

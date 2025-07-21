@@ -130,7 +130,8 @@ export class Model<TInput, TOutput = TInput> {
 
     // Convert _id back to string and validate
     const docWithStringId = convertIdFromMongo(result);
-    return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+    const filteredDoc = Object.fromEntries(Object.entries(docWithStringId).filter(([, v]) => v != null));
+    return this.adapter.parse(filteredDoc) as WithId<TOutput>;
   }
 
   /**

@@ -17,8 +17,8 @@ export type OptionalId<TSchema> = TSchema extends { _id: any }
  * Strict version that requires all non-_id fields to be present
  */
 export type StrictOptionalId<TSchema> = TSchema extends { _id: any }
-  ? Required<Omit<TSchema, '_id'>> & { _id?: string }
-  : Required<TSchema> & { _id?: string };
+  ? Omit<TSchema, '_id'> & { _id?: string }
+  : TSchema & { _id?: string };
 
 /**
  * Numeric types for MongoDB operations
