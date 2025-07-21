@@ -16,6 +16,7 @@ import type {
   UpdateResult,
   UpdateFilter,
   Document,
+  Filter,
 } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import type { SchemaAdapter } from '../adapters/base.js';
@@ -26,6 +27,7 @@ import type {
   PaprProjection,
   PaprUpdateFilter,
   WithId,
+  WithMongoId,
 } from '../types/index.js';
 import {
   convertFilterForMongo,
@@ -117,7 +119,10 @@ export class Model<TInput, TOutput = TInput> {
     options?: FindOptions,
   ): Promise<WithId<TOutput> | null> {
     const mongoFilter = convertFilterForMongo(filter);
-    const result = await this.collection.findOne(mongoFilter, options);
+    const result = await this.collection.findOne(
+      mongoFilter as Filter<Document>,
+      options,
+    );
 
     if (!result) {
       return null;
@@ -154,7 +159,7 @@ export class Model<TInput, TOutput = TInput> {
    */
   async find(filter: PaprFilter<TInput>, options?: FindOptions): Promise<WithId<TOutput>[]> {
     const mongoFilter = convertFilterForMongo(filter);
-    const cursor = this.collection.find(mongoFilter, options);
+    const cursor = this.collection.find(mongoFilter as Filter<Document>, options);
     const results = await cursor.toArray();
 
     return results.map((doc: Record<string, unknown>) => {
@@ -168,7 +173,7 @@ export class Model<TInput, TOutput = TInput> {
    */
   findCursor(filter: PaprFilter<TInput>, options?: FindOptions): FindCursor {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.find(mongoFilter, options);
+    return this.collection.find(mongoFilter as Filter<Document>, options);
   }
 
   /**
@@ -195,7 +200,7 @@ export class Model<TInput, TOutput = TInput> {
     }
 
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.updateOne(mongoFilter, update as UpdateFilter<Document>, options);
+    return this.collection.updateOne(mongoFilter as Filter<Document>, update as UpdateFilter<Document>, options);
   }
 
   /**
@@ -207,7 +212,7 @@ export class Model<TInput, TOutput = TInput> {
     options?: UpdateOptions,
   ): Promise<UpdateResult> {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.updateMany(mongoFilter, update as UpdateFilter<Document>, options);
+    return this.collection.updateMany(mongoFilter as Filter<Document>, update as UpdateFilter<Document>, options);
   }
 
   /**
@@ -246,7 +251,7 @@ export class Model<TInput, TOutput = TInput> {
     }
 
     const mongoFilter = convertFilterForMongo(filter);
-    const result = await this.collection.findOneAndUpdate(mongoFilter, update as UpdateFilter<Document>, {
+    const result = await this.collection.findOneAndUpdate(mongoFilter as Filter<Document>, update as UpdateFilter<Document>, {
       returnDocument: 'after',
       ...options,
     });
@@ -275,7 +280,7 @@ export class Model<TInput, TOutput = TInput> {
     }
 
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.deleteOne(mongoFilter, options);
+    return this.collection.deleteOne(mongoFilter as Filter<Document>, options);
   }
 
   /**
@@ -283,7 +288,7 @@ export class Model<TInput, TOutput = TInput> {
    */
   async deleteMany(filter: PaprFilter<TInput>, options?: DeleteOptions): Promise<DeleteResult> {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.deleteMany(mongoFilter, options);
+    return this.collection.deleteMany(mongoFilter as Filter<Document>, options);
   }
 
   /**
@@ -294,7 +299,7 @@ export class Model<TInput, TOutput = TInput> {
     options?: FindOneAndDeleteOptions,
   ): Promise<WithId<TOutput> | null> {
     const mongoFilter = convertFilterForMongo(filter);
-    const result = await this.collection.findOneAndDelete(mongoFilter, options || {});
+    const result = await this.collection.findOneAndDelete(mongoFilter as Filter<Document>, options || {});
 
     if (!result) {
       return null;
@@ -312,7 +317,7 @@ export class Model<TInput, TOutput = TInput> {
     options?: CountDocumentsOptions,
   ): Promise<number> {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.countDocuments(mongoFilter, options);
+    return this.collection.countDocuments(mongoFilter as Filter<Document>, options);
   }
 
   /**
@@ -331,7 +336,7 @@ export class Model<TInput, TOutput = TInput> {
     filter: PaprFilter<TInput> = {},
   ): Promise<WithId<TInput>[K][]> {
     const mongoFilter = convertFilterForMongo(filter);
-    return this.collection.distinct(key as string, mongoFilter);
+    return this.collection.distinct(key as string, mongoFilter as Filter<Document>);
   }
 
   /**

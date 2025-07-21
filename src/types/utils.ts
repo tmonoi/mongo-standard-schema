@@ -62,3 +62,23 @@ export type NestedPropertyType<T, P extends string> = P extends keyof T
 export type FlattenObject<T> = {
   [K in NestedPaths<T>]: NestedPropertyType<T, K>;
 };
+
+/**
+ * Recursively converts fields named `_id` from `string` to `ObjectId`.
+ * This is used to create a type that is compatible with the MongoDB driver's filters.
+ */
+export type WithMongoId<T> = T extends (infer U)[]
+  ? WithMongoId<U>[]
+  : T extends Date
+    ? T
+    : T extends object
+      ? {
+          [K in keyof T]: K extends '_id'
+            ? ObjectId
+            : T[K] extends (infer V)[]
+              ? WithMongoId<V>[]
+              : T[K] extends object
+                ? WithMongoId<T[K]>
+                : T[K];
+        }
+      : T;
