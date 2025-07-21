@@ -22,15 +22,17 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "vitest run",
+    "test": "pnpm run test:unit && pnpm run test:integration",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run",
+    "test:integration": "tsup && vitest run -c vitest.config.integration.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --apply .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm run test:run"
+    "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run test"
   },
   "keywords": ["mongodb", "typescript", "schema", "validation", "zod", "type-safe", "database"],
   "author": "tmonoi",

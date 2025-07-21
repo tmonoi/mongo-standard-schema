@@ -1,7 +1,7 @@
 import type { MongoClient } from 'mongodb';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
-import { Client } from '../../src/index.js';
+import { Client } from 'mongo-standard-schema';
 
 describe('Sample Code Integration', () => {
   let client: Client;
