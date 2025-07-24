@@ -39,7 +39,7 @@ import {
 /**
  * Model class that provides type-safe MongoDB operations
  */
-export class Model<TInput, TOutput = TInput> {
+export class Model<TInput, TOutput> {
   private collection: Collection;
 
   constructor(

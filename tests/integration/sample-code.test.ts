@@ -155,4 +155,20 @@ describe('Sample Code Integration', () => {
     expect(remainingUsers).toHaveLength(1);
     expect(remainingUsers[0]?.name).toBe('Bob');
   });
+
+  test('should handle default values', async () => {
+    const User = client.model(
+      'users',
+      z.object({
+        _id: z.string(),
+        name: z.string(),
+        age: z.number().default(() => 18),
+      }),
+    );
+
+    const doc = await User.insertOne({
+      name: 'John',
+    });
+    expect(doc.age).toBe(18);
+  });
 });

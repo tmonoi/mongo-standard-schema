@@ -23,7 +23,7 @@ export class Client {
   model<TSchema extends z.ZodType>(
     collectionName: string,
     schema: TSchema,
-  ): Model<z.infer<TSchema>, z.output<TSchema>> {
+  ): Model<z.input<TSchema>, z.output<TSchema>> {
     const adapter = new ZodAdapter(schema);
     return new Model(this.db, collectionName, adapter);
   }
