@@ -1,7 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "mongo-standard-schema": "file:../../build/package",
-    "mongodb": "6.10.0"
-  }
-}
