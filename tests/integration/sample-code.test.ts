@@ -170,5 +170,41 @@ describe('Sample Code Integration', () => {
       name: 'John',
     });
     expect(doc.age).toBe(18);
+
+    // Test updateOne
+    const updateResult = await User.updateOne({ _id: doc._id }, { $set: { age: 20 } });
+    expect(updateResult.modifiedCount).toBe(1);
+
+    // Test findOneAndUpdate
+    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { name: "John Doe" } }, { returnDocument: 'after' });
+    expect(updatedDoc?.age).toBe(20);
+  });
+
+  test('should handle nested objects', async () => {
+    const userSchema = z.object({
+      _id: z.string(),
+      tags: z.array(z.object({
+        color: z.string().default('red'),
+        name: z.string(),
+      })).default([]),
+    });
+
+    const User = client.model('users', userSchema);
+
+    const doc = await User.insertOne({
+      tags: [
+        { name: 'tag1' },
+        { name: 'tag2', color: 'green' },
+      ],
+    });
+
+    expect(doc.tags).toHaveLength(2);
+    expect(doc.tags[0].color).toBe('red');
+    expect(doc.tags[1].color).toBe('green');
+
+    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { tags: [{ name: 'tag3' }] } }, { returnDocument: 'after' });
+    expect(updatedDoc?.tags).toHaveLength(1);
+    expect(updatedDoc?.tags[0].color).toBe('red');
+    expect(updatedDoc?.tags[0].name).toBe('tag3');
   });
 });
