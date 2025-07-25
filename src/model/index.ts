@@ -37,17 +37,34 @@ import {
 } from "../utils/objectid.js";
 
 /**
+ * Options for Model configuration
+ */
+export interface ModelOptions {
+  /**
+   * Whether to parse documents on find operations
+   * @default false
+   */
+  parseOnFind?: boolean;
+}
+
+/**
  * Model class that provides type-safe MongoDB operations
  */
 export class Model<TInput, TOutput> {
   private collection: Collection;
+  private options: ModelOptions;
 
   constructor(
     private db: Db,
     private collectionName: string,
-    private adapter: SchemaAdapter<TInput, TOutput>
+    private adapter: SchemaAdapter<TInput, TOutput>,
+    options: ModelOptions = {}
   ) {
     this.collection = db.collection(collectionName);
+    this.options = {
+      parseOnFind: false,
+      ...options,
+    };
   }
 
   /**
@@ -142,12 +159,17 @@ export class Model<TInput, TOutput> {
       return null;
     }
 
-    // Convert _id back to string and validate
+    // Convert _id back to string
     const docWithStringId = convertIdFromMongo(result);
     const filteredDoc = Object.fromEntries(
       Object.entries(docWithStringId).filter(([, v]) => v != null)
     );
-    return this.adapter.parse(filteredDoc) as WithId<TOutput>;
+    
+    // Parse only if parseOnFind is true
+    if (this.options.parseOnFind) {
+      return this.adapter.parse(filteredDoc) as WithId<TOutput>;
+    }
+    return filteredDoc as WithId<TOutput>;
   }
 
   /**
@@ -164,7 +186,10 @@ export class Model<TInput, TOutput> {
     );
     if (stringResult) {
       const docWithStringId = convertIdFromMongo(stringResult);
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      if (this.options.parseOnFind) {
+        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      }
+      return docWithStringId as unknown as WithId<TOutput>;
     }
 
     // If not found as string, try as ObjectId
@@ -174,7 +199,10 @@ export class Model<TInput, TOutput> {
     );
     if (objectIdResult) {
       const docWithStringId = convertIdFromMongo(objectIdResult);
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      if (this.options.parseOnFind) {
+        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      }
+      return docWithStringId as unknown as WithId<TOutput>;
     }
 
     return null;
@@ -196,7 +224,10 @@ export class Model<TInput, TOutput> {
 
     return results.map((doc: Record<string, unknown>) => {
       const docWithStringId = convertIdFromMongo(doc);
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      if (this.options.parseOnFind) {
+        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      }
+      return docWithStringId as unknown as WithId<TOutput>;
     });
   }
 
@@ -295,7 +326,10 @@ export class Model<TInput, TOutput> {
       }
 
       const docWithStringId = convertIdFromMongo(result);
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      if (this.options.parseOnFind) {
+        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      }
+      return docWithStringId as unknown as WithId<TOutput>;
     }
 
     const mongoFilter = convertFilterForMongo(filter);
@@ -313,7 +347,10 @@ export class Model<TInput, TOutput> {
     }
 
     const docWithStringId = convertIdFromMongo(result);
-    return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+    if (this.options.parseOnFind) {
+      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+    }
+    return docWithStringId as unknown as WithId<TOutput>;
   }
 
   /**
@@ -373,7 +410,10 @@ export class Model<TInput, TOutput> {
     }
 
     const docWithStringId = convertIdFromMongo(result);
-    return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+    if (this.options.parseOnFind) {
+      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+    }
+    return docWithStringId as unknown as WithId<TOutput>;
   }
 
   /**

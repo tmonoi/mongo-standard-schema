@@ -2,7 +2,7 @@ import type { Db } from 'mongodb';
 import type { z } from 'zod';
 import type { InferOutput, SchemaAdapter } from '../adapters/base.js';
 import { ZodAdapter } from '../adapters/zod.js';
-import { Model } from '../model/index.js';
+import { Model, type ModelOptions } from '../model/index.js';
 
 /**
  * Main client class for mongo-standard-schema
@@ -23,9 +23,10 @@ export class Client {
   model<TSchema extends z.ZodType>(
     collectionName: string,
     schema: TSchema,
+    options?: ModelOptions,
   ): Model<z.input<TSchema>, z.output<TSchema>> {
     const adapter = new ZodAdapter(schema);
-    return new Model(this.db, collectionName, adapter);
+    return new Model(this.db, collectionName, adapter, options);
   }
 
   /**
@@ -34,8 +35,9 @@ export class Client {
   modelWithAdapter<TInput, TOutput = TInput>(
     collectionName: string,
     adapter: SchemaAdapter<TInput, TOutput>,
+    options?: ModelOptions,
   ): Model<TInput, TOutput> {
-    return new Model(this.db, collectionName, adapter);
+    return new Model(this.db, collectionName, adapter, options);
   }
 
   /**
