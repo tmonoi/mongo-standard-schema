@@ -31,6 +31,30 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
     return this.schema;
   }
 
+  parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
+    // Check if the schema is a ZodObject
+    const schema = this.schema as any;
+    if (!schema.shape || typeof schema.shape !== 'object') {
+      // If not a ZodObject, return fields as-is
+      return fields;
+    }
+
+    const processedFields: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(fields)) {
+      const fieldSchema = schema.shape[key];
+      if (fieldSchema?.parse) {
+        // Parse the field value to apply defaults and validation
+        processedFields[key] = fieldSchema.parse(value);
+      } else {
+        // No schema for this field, use the value as-is
+        processedFields[key] = value;
+      }
+    }
+
+    return processedFields;
+  }
+
   /**
    * Static factory method to create ZodAdapter from Zod schema
    */

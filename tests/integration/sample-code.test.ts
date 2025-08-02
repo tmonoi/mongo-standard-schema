@@ -189,7 +189,7 @@ describe('Sample Code Integration', () => {
       })).default([]),
     });
 
-    const User = client.model('users', userSchema, { parseOnFind: true });
+    const User = client.model('users', userSchema, { parseOnFind: false });
 
     const doc = await User.insertOne({
       tags: [

@@ -68,6 +68,26 @@ export class Model<TInput, TOutput> {
   }
 
   /**
+   * Process update operations to apply defaults and validation
+   */
+  private processUpdateOperation(update: PaprUpdateFilter<TInput>): PaprUpdateFilter<TInput> {
+    if (!update.$set) {
+      return update;
+    }
+
+    // Check if adapter supports parseUpdateFields
+    if (!this.adapter.parseUpdateFields) {
+      return update;
+    }
+
+    const processedFields = this.adapter.parseUpdateFields(update.$set);
+    return {
+      ...update,
+      $set: processedFields as any,
+    };
+  }
+
+  /**
    * Insert a single document
    */
   async insertOne(
@@ -247,19 +267,22 @@ export class Model<TInput, TOutput> {
     update: PaprUpdateFilter<TInput>,
     options?: UpdateOptions
   ): Promise<UpdateResult> {
+    // Process update to apply defaults and validation
+    const processedUpdate = this.processUpdateOperation(update);
+
     // Handle _id field specially to support both string and ObjectId formats
     if ("_id" in filter && typeof filter._id === "string") {
       // Try string format first
       let result = await this.collection.updateOne(
         { _id: filter._id },
-        update as UpdateFilter<Document>,
+        processedUpdate as UpdateFilter<Document>,
         options
       );
       if (result.matchedCount === 0) {
         // If no match, try ObjectId format
         result = await this.collection.updateOne(
           { _id: stringToObjectId(filter._id) },
-          update as UpdateFilter<Document>,
+          processedUpdate as UpdateFilter<Document>,
           options
         );
       }
@@ -269,7 +292,7 @@ export class Model<TInput, TOutput> {
     const mongoFilter = convertFilterForMongo(filter);
     return this.collection.updateOne(
       mongoFilter as Filter<Document>,
-      update as UpdateFilter<Document>,
+      processedUpdate as UpdateFilter<Document>,
       options
     );
   }
@@ -282,10 +305,13 @@ export class Model<TInput, TOutput> {
     update: PaprUpdateFilter<TInput>,
     options?: UpdateOptions
   ): Promise<UpdateResult> {
+    // Process update to apply defaults and validation
+    const processedUpdate = this.processUpdateOperation(update);
+
     const mongoFilter = convertFilterForMongo(filter);
     return this.collection.updateMany(
       mongoFilter as Filter<Document>,
-      update as UpdateFilter<Document>,
+      processedUpdate as UpdateFilter<Document>,
       options
     );
   }
@@ -298,12 +324,15 @@ export class Model<TInput, TOutput> {
     update: PaprUpdateFilter<TInput>,
     options?: FindOneAndUpdateOptions
   ): Promise<WithId<TOutput> | null> {
+    // Process update to apply defaults and validation
+    const processedUpdate = this.processUpdateOperation(update);
+
     // Handle _id field specially to support both string and ObjectId formats
     if ("_id" in filter && typeof filter._id === "string") {
       // Try string format first
       let result = await this.collection.findOneAndUpdate(
         { _id: filter._id },
-        update as UpdateFilter<Document>,
+        processedUpdate as UpdateFilter<Document>,
         {
           returnDocument: "after",
           ...options,
@@ -313,7 +342,7 @@ export class Model<TInput, TOutput> {
         // If no match, try ObjectId format
         result = await this.collection.findOneAndUpdate(
           { _id: stringToObjectId(filter._id) },
-          update as UpdateFilter<Document>,
+          processedUpdate as UpdateFilter<Document>,
           {
             returnDocument: "after",
             ...options,
@@ -335,7 +364,7 @@ export class Model<TInput, TOutput> {
     const mongoFilter = convertFilterForMongo(filter);
     const result = await this.collection.findOneAndUpdate(
       mongoFilter as Filter<Document>,
-      update as UpdateFilter<Document>,
+      processedUpdate as UpdateFilter<Document>,
       {
         returnDocument: "after",
         ...options,
