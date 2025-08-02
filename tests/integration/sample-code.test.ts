@@ -199,12 +199,12 @@ describe('Sample Code Integration', () => {
     });
 
     expect(doc.tags).toHaveLength(2);
-    expect(doc.tags[0].color).toBe('red');
-    expect(doc.tags[1].color).toBe('green');
+    expect(doc.tags[0]?.color).toBe('red');
+    expect(doc.tags[1]?.color).toBe('green');
 
     const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { tags: [{ name: 'tag3' }] } }, { returnDocument: 'after' });
     expect(updatedDoc?.tags).toHaveLength(1);
-    expect(updatedDoc?.tags[0].color).toBe('red');
-    expect(updatedDoc?.tags[0].name).toBe('tag3');
+    expect(updatedDoc?.tags[0]?.color).toBe('red');
+    expect(updatedDoc?.tags[0]?.name).toBe('tag3');
   });
 });

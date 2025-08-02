@@ -20,7 +20,13 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
   }
 
   partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>> {
-    return new ZodAdapter((this.schema as any).partial());
+    // Type assertion is needed here because Zod's partial() method is not available on all schema types
+    // We need to use 'unknown' first for safer type conversion
+    const unknownSchema = this.schema as unknown;
+    const zodObjectSchema = unknownSchema as z.ZodObject<z.ZodRawShape>;
+    const partialSchema = zodObjectSchema.partial();
+    const adapter = new ZodAdapter(partialSchema) as unknown;
+    return adapter as SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
   }
 
   optional(): SchemaAdapter<TInput | undefined, TOutput | undefined> {
@@ -33,11 +39,15 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
 
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
     // Check if the schema is a ZodObject
-    const schema = this.schema as any;
-    if (!schema.shape || typeof schema.shape !== 'object') {
+    const schemaWithShape = this.schema as z.ZodType & { shape?: unknown };
+    if (!schemaWithShape.shape || typeof schemaWithShape.shape !== 'object') {
       // If not a ZodObject, return fields as-is
       return fields;
     }
+
+    // Use unknown first for safer type conversion
+    const unknownSchema = this.schema as unknown;
+    const schema = unknownSchema as z.ZodObject<z.ZodRawShape>;
 
     const processedFields: Record<string, unknown> = {};
 

@@ -26,6 +26,7 @@ import type {
   PaprFilter,
   PaprProjection,
   PaprUpdateFilter,
+  PaprMatchKeysAndValues,
   WithId,
   WithMongoId,
 } from "../types/index.js";
@@ -83,7 +84,7 @@ export class Model<TInput, TOutput> {
     const processedFields = this.adapter.parseUpdateFields(update.$set);
     return {
       ...update,
-      $set: processedFields as any,
+      $set: processedFields as PaprMatchKeysAndValues<WithId<TInput>>,
     };
   }
 
