@@ -155,4 +155,56 @@ describe('Sample Code Integration', () => {
     expect(remainingUsers).toHaveLength(1);
     expect(remainingUsers[0]?.name).toBe('Bob');
   });
+
+  test('should handle default values', async () => {
+    const User = client.model(
+      'users',
+      z.object({
+        _id: z.string(),
+        name: z.string(),
+        age: z.number().default(() => 18),
+      }),
+    );
+
+    const doc = await User.insertOne({
+      name: 'John',
+    });
+    expect(doc.age).toBe(18);
+
+    // Test updateOne
+    const updateResult = await User.updateOne({ _id: doc._id }, { $set: { age: 20 } });
+    expect(updateResult.modifiedCount).toBe(1);
+
+    // Test findOneAndUpdate
+    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { name: "John Doe" } }, { returnDocument: 'after' });
+    expect(updatedDoc?.age).toBe(20);
+  });
+
+  test('should handle nested objects', async () => {
+    const userSchema = z.object({
+      _id: z.string(),
+      tags: z.array(z.object({
+        color: z.string().default('red'),
+        name: z.string(),
+      })).default([]),
+    });
+
+    const User = client.model('users', userSchema);
+
+    const doc = await User.insertOne({
+      tags: [
+        { name: 'tag1' },
+        { name: 'tag2', color: 'green' },
+      ],
+    });
+
+    expect(doc.tags).toHaveLength(2);
+    expect(doc.tags[0]?.color).toBe('red');
+    expect(doc.tags[1]?.color).toBe('green');
+
+    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { tags: [{ name: 'tag3' }] } }, { returnDocument: 'after' });
+    expect(updatedDoc?.tags).toHaveLength(1);
+    expect(updatedDoc?.tags[0]?.color).toBe('red');
+    expect(updatedDoc?.tags[0]?.name).toBe('tag3');
+  });
 });

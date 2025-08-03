@@ -27,6 +27,12 @@ export interface SchemaAdapter<TInput, TOutput = TInput> {
    * Get the original schema object
    */
   getSchema(): unknown;
+
+  /**
+   * Process update fields to apply defaults and validation
+   * This is used for MongoDB update operations like $set
+   */
+  parseUpdateFields?(fields: Record<string, unknown>): Record<string, unknown>;
 }
 
 /**

@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { Model } from './index.js';
 import { ObjectId } from 'mongodb';
+import type { Db, Collection } from 'mongodb';
+import type { SchemaAdapter } from '../adapters/base.js';
+
+// Define test types
+interface TestDoc {
+  _id: string;
+  name?: string;
+  age?: number;
+  status?: string;
+  tags?: string[];
+}
 
 // Mocks
 const mockCollection = {
@@ -31,12 +42,33 @@ const mockAdapter = {
 };
 
 describe('Model', () => {
-  let model: Model<any, any>;
+  let model: Model<TestDoc, TestDoc>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockAdapter.parse.mockImplementation((data) => data);
-    model = new Model(mockDb as any, 'test', mockAdapter as any);
+    model = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>);
+  });
+
+  describe('Model with parseOnFind option', () => {
+    test('should not parse by default (parseOnFind: false)', async () => {
+      const doc = { _id: new ObjectId(), name: 'test' };
+      mockCollection.findOne.mockResolvedValue(doc);
+
+      await model.findOne({ name: 'test' });
+
+      expect(mockAdapter.parse).not.toHaveBeenCalled();
+    });
+
+    test('should parse when parseOnFind is true', async () => {
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const doc = { _id: new ObjectId(), name: 'test' };
+      mockCollection.findOne.mockResolvedValue(doc);
+
+      await modelWithParse.findOne({ name: 'test' });
+
+      expect(mockAdapter.parse).toHaveBeenCalled();
+    });
   });
 
   describe('insertOne', () => {
@@ -92,12 +124,25 @@ describe('Model', () => {
   });
 
   describe('findOne', () => {
-    test('should find a document', async () => {
+    test('should find a document without parsing by default', async () => {
       const filter = { name: 'test' };
       const doc = { _id: new ObjectId(), name: 'test' };
       mockCollection.findOne.mockResolvedValue(doc);
 
       const result = await model.findOne(filter);
+
+      expect(mockCollection.findOne).toHaveBeenCalledWith(filter, undefined);
+      expect(mockAdapter.parse).not.toHaveBeenCalled();
+      expect(result).toEqual({ ...doc, _id: doc._id.toString() });
+    });
+
+    test('should find a document with parsing when parseOnFind is true', async () => {
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const filter = { name: 'test' };
+      const doc = { _id: new ObjectId(), name: 'test' };
+      mockCollection.findOne.mockResolvedValue(doc);
+
+      const result = await modelWithParse.findOne(filter);
 
       expect(mockCollection.findOne).toHaveBeenCalledWith(filter, undefined);
       expect(mockAdapter.parse).toHaveBeenCalledWith({ ...doc, _id: doc._id.toString() });
@@ -128,19 +173,36 @@ describe('Model', () => {
   });
 
   describe('find', () => {
-    test('should find multiple documents', async () => {
+    test('should find multiple documents without parsing by default', async () => {
       const filter = { age: { $gt: 20 } };
       const docs = [
         { _id: new ObjectId(), name: 'test1', age: 21 },
         { _id: new ObjectId(), name: 'test2', age: 22 },
       ];
-      mockCollection.find.mockReturnValue({ toArray: async () => docs } as any);
+      mockCollection.find.mockReturnValue({ toArray: async () => docs });
 
       const result = await model.find(filter);
 
       expect(mockCollection.find).toHaveBeenCalledWith(filter, undefined);
+      expect(mockAdapter.parse).not.toHaveBeenCalled();
       expect(result).toHaveLength(2);
       expect(result[0]?.name).toBe('test1');
+    });
+
+    test('should find multiple documents with parsing when parseOnFind is true', async () => {
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const filter = { age: { $gt: 20 } };
+      const docs = [
+        { _id: new ObjectId(), name: 'test1', age: 21 },
+        { _id: new ObjectId(), name: 'test2', age: 22 },
+      ];
+      mockCollection.find.mockReturnValue({ toArray: async () => docs });
+
+      const result = await modelWithParse.find(filter);
+
+      expect(mockCollection.find).toHaveBeenCalledWith(filter, undefined);
+      expect(mockAdapter.parse).toHaveBeenCalledTimes(2);
+      expect(result).toHaveLength(2);
     });
   });
 
@@ -148,7 +210,7 @@ describe('Model', () => {
     test('should update a document', async () => {
       const filter = { name: 'test' };
       const update = { $set: { name: 'updated' } };
-      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 } as any);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 } );
 
       const result = await model.updateOne(filter, update);
 
@@ -161,7 +223,7 @@ describe('Model', () => {
     test('should update multiple documents', async () => {
       const filter = { status: 'old' };
       const update = { $set: { status: 'new' } };
-      mockCollection.updateMany.mockResolvedValue({ matchedCount: 2, modifiedCount: 2 } as any);
+      mockCollection.updateMany.mockResolvedValue({ matchedCount: 2, modifiedCount: 2 });
 
       const result = await model.updateMany(filter, update);
 
@@ -171,7 +233,7 @@ describe('Model', () => {
   });
 
   describe('findOneAndUpdate', () => {
-    test('should find and update a document', async () => {
+    test('should find and update a document without parsing by default', async () => {
       const filter = { name: 'test' };
       const update = { $set: { name: 'updated' } };
       const doc = { _id: new ObjectId(), name: 'updated' };
@@ -180,6 +242,21 @@ describe('Model', () => {
       const result = await model.findOneAndUpdate(filter, update);
 
       expect(mockCollection.findOneAndUpdate).toHaveBeenCalled();
+      expect(mockAdapter.parse).not.toHaveBeenCalled();
+      expect(result?.name).toBe('updated');
+    });
+
+    test('should find and update a document with parsing when parseOnFind is true', async () => {
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const filter = { name: 'test' };
+      const update = { $set: { name: 'updated' } };
+      const doc = { _id: new ObjectId(), name: 'updated' };
+      mockCollection.findOneAndUpdate.mockResolvedValue(doc);
+
+      const result = await modelWithParse.findOneAndUpdate(filter, update);
+
+      expect(mockCollection.findOneAndUpdate).toHaveBeenCalled();
+      expect(mockAdapter.parse).toHaveBeenCalled();
       expect(result?.name).toBe('updated');
     });
   });
@@ -187,7 +264,7 @@ describe('Model', () => {
   describe('deleteOne', () => {
     test('should delete a document', async () => {
       const filter = { name: 'test' };
-      mockCollection.deleteOne.mockResolvedValue({ deletedCount: 1 } as any);
+      mockCollection.deleteOne.mockResolvedValue({ deletedCount: 1 });
 
       const result = await model.deleteOne(filter);
 
@@ -199,7 +276,7 @@ describe('Model', () => {
   describe('deleteMany', () => {
     test('should delete multiple documents', async () => {
       const filter = { status: 'old' };
-      mockCollection.deleteMany.mockResolvedValue({ deletedCount: 2 } as any);
+      mockCollection.deleteMany.mockResolvedValue({ deletedCount: 2 });
 
       const result = await model.deleteMany(filter);
 
@@ -209,7 +286,7 @@ describe('Model', () => {
   });
 
   describe('findOneAndDelete', () => {
-    test('should find and delete a document', async () => {
+    test('should find and delete a document without parsing by default', async () => {
       const filter = { name: 'test' };
       const doc = { _id: new ObjectId(), name: 'test' };
       mockCollection.findOneAndDelete.mockResolvedValue(doc);
@@ -217,6 +294,20 @@ describe('Model', () => {
       const result = await model.findOneAndDelete(filter);
 
       expect(mockCollection.findOneAndDelete).toHaveBeenCalled();
+      expect(mockAdapter.parse).not.toHaveBeenCalled();
+      expect(result?.name).toBe('test');
+    });
+
+    test('should find and delete a document with parsing when parseOnFind is true', async () => {
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const filter = { name: 'test' };
+      const doc = { _id: new ObjectId(), name: 'test' };
+      mockCollection.findOneAndDelete.mockResolvedValue(doc);
+
+      const result = await modelWithParse.findOneAndDelete(filter);
+
+      expect(mockCollection.findOneAndDelete).toHaveBeenCalled();
+      expect(mockAdapter.parse).toHaveBeenCalled();
       expect(result?.name).toBe('test');
     });
   });

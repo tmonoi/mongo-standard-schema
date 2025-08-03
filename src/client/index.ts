@@ -1,20 +1,24 @@
-import type { Db } from 'mongodb';
+import type { Db, MongoClient } from 'mongodb';
 import type { z } from 'zod';
 import type { InferOutput, SchemaAdapter } from '../adapters/base.js';
 import { ZodAdapter } from '../adapters/zod.js';
-import { Model } from '../model/index.js';
+import { Model, type ModelOptions } from '../model/index.js';
 
 /**
  * Main client class for mongo-standard-schema
  */
 export class Client {
-  constructor(private db: Db) {}
+  private mongoClient: MongoClient | undefined;
+
+  constructor(private db: Db, mongoClient?: MongoClient) {
+    this.mongoClient = mongoClient;
+  }
 
   /**
    * Initialize client with MongoDB database connection
    */
-  static initialize(db: Db): Client {
-    return new Client(db);
+  static initialize(db: Db, mongoClient?: MongoClient): Client {
+    return new Client(db, mongoClient);
   }
 
   /**
@@ -23,9 +27,10 @@ export class Client {
   model<TSchema extends z.ZodType>(
     collectionName: string,
     schema: TSchema,
-  ): Model<z.infer<TSchema>, z.output<TSchema>> {
+    options?: ModelOptions,
+  ): Model<z.input<TSchema>, z.output<TSchema>> {
     const adapter = new ZodAdapter(schema);
-    return new Model(this.db, collectionName, adapter);
+    return new Model(this.db, collectionName, adapter, options);
   }
 
   /**
@@ -34,8 +39,9 @@ export class Client {
   modelWithAdapter<TInput, TOutput = TInput>(
     collectionName: string,
     adapter: SchemaAdapter<TInput, TOutput>,
+    options?: ModelOptions,
   ): Model<TInput, TOutput> {
-    return new Model(this.db, collectionName, adapter);
+    return new Model(this.db, collectionName, adapter, options);
   }
 
   /**
@@ -52,9 +58,8 @@ export class Client {
     // Note: In practice, you should close the MongoClient, not the Db
     // This method is provided for convenience but the actual connection
     // management should be handled at the MongoClient level
-    const client = (this.db as any).client;
-    if (client && typeof client.close === 'function') {
-      await client.close();
+    if (this.mongoClient && typeof this.mongoClient.close === 'function') {
+      await this.mongoClient.close();
     }
   }
 }

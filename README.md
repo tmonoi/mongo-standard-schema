@@ -71,9 +71,20 @@ await User.deleteOne({ _id: user._id });
 
 Initialize a new client with a MongoDB database connection.
 
-#### `client.model<TSchema>(collectionName: string, schema: TSchema): Model`
+#### `client.model<TSchema>(collectionName: string, schema: TSchema, options?: ModelOptions): Model`
 
 Create a new model with a Zod schema.
+
+**Options:**
+- `parseOnFind` (boolean, default: `false`): Whether to parse documents through the schema on find operations. When `false`, find operations return raw data from MongoDB without validation. When `true`, all documents are validated against the schema.
+
+```typescript
+// Default behavior - no parsing on find
+const User = client.model('users', userSchema);
+
+// Enable parsing on find operations
+const User = client.model('users', userSchema, { parseOnFind: true });
+```
 
 ### Model
 
@@ -171,7 +182,10 @@ const foundUser = await User.findById(user._id); // Works seamlessly
 
 ## Validation
 
-Documents are validated using your schema before database operations:
+Documents are validated using your schema:
+
+### Insert Operations
+Documents are always validated during insert operations:
 
 ```typescript
 const User = client.model('users', z.object({
@@ -188,6 +202,30 @@ await User.insertOne({
   email: 'invalid-email', // Invalid: not a valid email
 });
 ```
+
+### Find Operations
+By default, documents retrieved from the database are **not** parsed through the schema for performance reasons. This means:
+- Find operations are faster
+- You get the raw data from MongoDB
+- Default values from the schema are not applied
+
+If you need validation and default values on find operations, enable `parseOnFind`:
+
+```typescript
+// Enable parsing for find operations
+const User = client.model('users', userSchema, { parseOnFind: true });
+
+// Now find operations will:
+// - Validate retrieved documents
+// - Apply default values from the schema
+// - Throw errors if documents don't match the schema
+const user = await User.findOne({ name: 'John' });
+```
+
+This is particularly useful when:
+- You have default values in your schema that should be applied
+- You want to ensure data consistency when reading from the database
+- You're working with data that might have been modified outside your application
 
 ## Development
 

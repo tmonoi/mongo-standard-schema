@@ -27,6 +27,7 @@
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run",
     "test:integration": "tsup && vitest run -c vitest.config.integration.ts",
+    "test:integration:only": "vitest run -c vitest.config.integration.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --apply .",
     "format": "biome format --write .",

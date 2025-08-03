@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { type z, ZodObject } from 'zod';
 import type { SchemaAdapter } from './base.js';
 
 /**
@@ -20,7 +20,16 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
   }
 
   partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>> {
-    return new ZodAdapter((this.schema as any).partial());
+    // Check if the schema is a ZodObject using instanceof
+    if (!(this.schema instanceof ZodObject)) {
+      // If not a ZodObject, throw an error as partial() is not supported
+      throw new Error('partial() is only supported for ZodObject schemas');
+    }
+    
+    const partialSchema = this.schema.partial();
+    // We need to use unknown as an intermediate step for type safety
+    const adapter = new ZodAdapter(partialSchema) as unknown;
+    return adapter as SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
   }
 
   optional(): SchemaAdapter<TInput | undefined, TOutput | undefined> {
@@ -29,6 +38,36 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
 
   getSchema(): z.ZodType<TOutput, z.ZodTypeDef, TInput> {
     return this.schema;
+  }
+
+  parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
+    // Check if the schema is a ZodObject using instanceof
+    if (!(this.schema instanceof ZodObject)) {
+      // If not a ZodObject, return fields as-is
+      return fields;
+    }
+
+    const schema = this.schema;
+    const processedFields: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(fields)) {
+      const fieldSchema = schema.shape[key];
+      if (fieldSchema) {
+        // Use safeParse for error handling
+        const result = fieldSchema.safeParse(value);
+        if (result.success) {
+          processedFields[key] = result.data;
+        } else {
+          // If parsing fails, use the original value
+          processedFields[key] = value;
+        }
+      } else {
+        // No schema for this field, use the value as-is
+        processedFields[key] = value;
+      }
+    }
+
+    return processedFields;
   }
 
   /**

@@ -2,6 +2,7 @@
 export { Client } from './client/index.js';
 export type { SchemaAdapter } from './adapters/index.js';
 export { ZodAdapter } from './adapters/zod.js';
+export type { ModelOptions } from './model/index.js';
 
 // Re-export types
 export type {
