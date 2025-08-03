@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { type z, ZodObject } from 'zod';
 import type { SchemaAdapter } from './base.js';
 
 /**
@@ -20,11 +20,14 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
   }
 
   partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>> {
-    // Type assertion is needed here because Zod's partial() method is not available on all schema types
-    // We need to use 'unknown' first for safer type conversion
-    const unknownSchema = this.schema as unknown;
-    const zodObjectSchema = unknownSchema as z.ZodObject<z.ZodRawShape>;
-    const partialSchema = zodObjectSchema.partial();
+    // Check if the schema is a ZodObject using instanceof
+    if (!(this.schema instanceof ZodObject)) {
+      // If not a ZodObject, throw an error as partial() is not supported
+      throw new Error('partial() is only supported for ZodObject schemas');
+    }
+    
+    const partialSchema = this.schema.partial();
+    // We need to use unknown as an intermediate step for type safety
     const adapter = new ZodAdapter(partialSchema) as unknown;
     return adapter as SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
   }
@@ -38,24 +41,26 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
   }
 
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
-    // Check if the schema is a ZodObject
-    const schemaWithShape = this.schema as z.ZodType & { shape?: unknown };
-    if (!schemaWithShape.shape || typeof schemaWithShape.shape !== 'object') {
+    // Check if the schema is a ZodObject using instanceof
+    if (!(this.schema instanceof ZodObject)) {
       // If not a ZodObject, return fields as-is
       return fields;
     }
 
-    // Use unknown first for safer type conversion
-    const unknownSchema = this.schema as unknown;
-    const schema = unknownSchema as z.ZodObject<z.ZodRawShape>;
-
+    const schema = this.schema;
     const processedFields: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(fields)) {
       const fieldSchema = schema.shape[key];
-      if (fieldSchema?.parse) {
-        // Parse the field value to apply defaults and validation
-        processedFields[key] = fieldSchema.parse(value);
+      if (fieldSchema) {
+        // Use safeParse for error handling
+        const result = fieldSchema.safeParse(value);
+        if (result.success) {
+          processedFields[key] = result.data;
+        } else {
+          // If parsing fails, use the original value
+          processedFields[key] = value;
+        }
       } else {
         // No schema for this field, use the value as-is
         processedFields[key] = value;
