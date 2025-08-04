@@ -19,7 +19,7 @@ import type {
   Filter,
 } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { SchemaAdapter } from "../adapters/base.js";
+import type { Adapter } from "../adapters/base.js";
 import type {
   OptionalId,
   StrictOptionalId,
@@ -58,7 +58,7 @@ export class Model<TInput, TOutput> {
   constructor(
     private db: Db,
     private collectionName: string,
-    private adapter: SchemaAdapter<TInput, TOutput>,
+    private adapter: Adapter<TInput, TOutput>,
     options: ModelOptions = {}
   ) {
     this.collection = db.collection(collectionName);
@@ -497,9 +497,9 @@ export class Model<TInput, TOutput> {
   }
 
   /**
-   * Get the schema adapter
+   * Get the adapter
    */
-  getAdapter(): SchemaAdapter<TInput, TOutput> {
+  getAdapter(): Adapter<TInput, TOutput> {
     return this.adapter;
   }
 }

@@ -1,5 +1,5 @@
 // Re-export all adapters
-export type { SchemaAdapter, InferInput, InferOutput } from './base.js';
+export type { Adapter, InferInput, InferOutput } from './base.js';
 export { StandardSchemaAdapter } from './standard-schema-adapter.js';
 export {
   ZodAdapter,

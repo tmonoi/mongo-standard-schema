@@ -1,9 +1,9 @@
 import type { StandardSchemaV1 } from '../types/standard-schema.js';
-import type { SchemaAdapter } from './base.js';
+import type { Adapter } from './base.js';
 
 /**
  * Base class for Standard Schema adapters
- * This class provides a bridge between Standard Schema and our SchemaAdapter interface
+ * This class provides a bridge between Standard Schema and our Adapter interface
  */
 export abstract class StandardSchemaAdapter {
   /**
@@ -17,7 +17,7 @@ export abstract class StandardSchemaAdapter {
   abstract supports(schema: unknown): boolean;
 
   /**
-   * Create a SchemaAdapter from a schema
+   * Create an Adapter from a schema
    */
-  abstract create(schema: unknown): SchemaAdapter<unknown, unknown>;
+  abstract create(schema: unknown): Adapter<unknown, unknown>;
 }

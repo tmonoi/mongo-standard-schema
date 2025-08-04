@@ -1,5 +1,5 @@
 import { type z, ZodObject, type ZodType } from 'zod';
-import type { SchemaAdapter } from './base.js';
+import type { Adapter } from './base.js';
 import { StandardSchemaAdapter } from './standard-schema-adapter.js';
 import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
@@ -14,7 +14,7 @@ export interface ZodSchemaInfer<TSchema extends z.ZodType> {
 /**
  * Zod adapter implementation
  */
-export class ZodSchemaAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInput, TOutput> {
+export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInput, TOutput> {
   constructor(private schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>) {}
 
   parse(data: unknown): TOutput {
@@ -29,7 +29,7 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements SchemaAdapter
     return { success: false, error: result.error };
   }
 
-  partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>> {
+  partial(): Adapter<Partial<TInput>, Partial<TOutput>> {
     // Check if the schema is a ZodObject using instanceof
     if (!(this.schema instanceof ZodObject)) {
       // If not a ZodObject, throw an error as partial() is not supported
@@ -39,10 +39,10 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements SchemaAdapter
     const partialSchema = this.schema.partial();
     // We need to use unknown as an intermediate step for type safety
     const adapter = new ZodSchemaAdapter(partialSchema) as unknown;
-    return adapter as SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
+    return adapter as Adapter<Partial<TInput>, Partial<TOutput>>;
   }
 
-  optional(): SchemaAdapter<TInput | undefined, TOutput | undefined> {
+  optional(): Adapter<TInput | undefined, TOutput | undefined> {
     return new ZodSchemaAdapter(this.schema.optional());
   }
 
@@ -106,7 +106,7 @@ export class ZodAdapter extends StandardSchemaAdapter {
     );
   }
 
-  create(schema: unknown): SchemaAdapter<unknown, unknown> {
+  create(schema: unknown): Adapter<unknown, unknown> {
     if (this.supports(schema)) {
       return new ZodSchemaAdapter(schema as z.ZodType);
     }

@@ -1,7 +1,7 @@
 import type { Db, MongoClient } from 'mongodb';
 import type { z } from 'zod';
 import type { BaseSchema, InferInput as VInferInput, InferOutput as VInferOutput } from 'valibot';
-import type { SchemaAdapter } from '../adapters/base.js';
+import type { Adapter } from '../adapters/base.js';
 import type { StandardSchemaAdapter } from '../adapters/standard-schema-adapter.js';
 import type { StandardSchemaV1, InferStandardInput, InferStandardOutput } from '../types/standard-schema.js';
 import { Model, type ModelOptions } from '../model/index.js';
@@ -58,8 +58,8 @@ export class Client {
       throw new Error(`Schema is not supported by ${this.adapter.name} adapter`);
     }
     
-    const schemaAdapter = this.adapter.create(schema);
-    return new Model(this.db, collectionName, schemaAdapter, options) as any;
+    const adapter = this.adapter.create(schema);
+    return new Model(this.db, collectionName, adapter, options) as any;
   }
 
   /**

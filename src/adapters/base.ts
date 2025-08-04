@@ -1,8 +1,8 @@
 /**
- * Base interface for schema adapters
+ * Base interface for adapters
  * This allows support for multiple validation libraries (zod, valibot, arktype, etc.)
  */
-export interface SchemaAdapter<TInput, TOutput = TInput> {
+export interface Adapter<TInput, TOutput = TInput> {
   /**
    * Parse data and throw on validation failure
    */
@@ -16,12 +16,12 @@ export interface SchemaAdapter<TInput, TOutput = TInput> {
   /**
    * Create a partial version of the schema (all fields optional)
    */
-  partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
+  partial(): Adapter<Partial<TInput>, Partial<TOutput>>;
 
   /**
    * Create an optional version of the schema (schema | undefined)
    */
-  optional(): SchemaAdapter<TInput | undefined, TOutput | undefined>;
+  optional(): Adapter<TInput | undefined, TOutput | undefined>;
 
   /**
    * Get the original schema object
@@ -36,11 +36,11 @@ export interface SchemaAdapter<TInput, TOutput = TInput> {
 }
 
 /**
- * Type helper to extract input type from schema adapter
+ * Type helper to extract input type from adapter
  */
-export type InferInput<T> = T extends SchemaAdapter<infer U, unknown> ? U : never;
+export type InferInput<T> = T extends Adapter<infer U, unknown> ? U : never;
 
 /**
- * Type helper to extract output type from schema adapter
+ * Type helper to extract output type from adapter
  */
-export type InferOutput<T> = T extends SchemaAdapter<unknown, infer U> ? U : never;
+export type InferOutput<T> = T extends Adapter<unknown, infer U> ? U : never;

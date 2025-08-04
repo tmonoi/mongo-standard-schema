@@ -1,6 +1,6 @@
 import type { BaseSchema, InferInput, InferOutput } from 'valibot';
 import * as v from 'valibot';
-import type { SchemaAdapter } from './base.js';
+import type { Adapter } from './base.js';
 import { StandardSchemaAdapter } from './standard-schema-adapter.js';
 import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
@@ -16,7 +16,7 @@ export interface ValibotSchemaInfer<TSchema extends BaseSchema<any, any, any>> {
  * Valibot schema adapter implementation
  */
 export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>
-  implements SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>> {
+  implements Adapter<InferInput<TSchema>, InferOutput<TSchema>> {
   
   constructor(private schema: TSchema) {}
 
@@ -32,7 +32,7 @@ export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v
     return { success: false, error: result.issues };
   }
 
-  partial(): SchemaAdapter<Partial<InferInput<TSchema>>, Partial<InferOutput<TSchema>>> {
+  partial(): Adapter<Partial<InferInput<TSchema>>, Partial<InferOutput<TSchema>>> {
     // Check if schema is an object schema
     const schemaType = (this.schema as any).type;
     if (schemaType !== 'object') {
@@ -43,7 +43,7 @@ export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v
     return new ValibotSchemaAdapter(partialSchema as any) as any;
   }
 
-  optional(): SchemaAdapter<InferInput<TSchema> | undefined, InferOutput<TSchema> | undefined> {
+  optional(): Adapter<InferInput<TSchema> | undefined, InferOutput<TSchema> | undefined> {
     const optionalSchema = v.optional(this.schema);
     return new ValibotSchemaAdapter(optionalSchema) as any;
   }
@@ -107,7 +107,7 @@ export class ValibotAdapter extends StandardSchemaAdapter {
     );
   }
 
-  create(schema: unknown): SchemaAdapter<unknown, unknown> {
+  create(schema: unknown): Adapter<unknown, unknown> {
     if (this.supports(schema)) {
       return new ValibotSchemaAdapter(schema as BaseSchema<unknown, unknown, v.BaseIssue<unknown>>);
     }
