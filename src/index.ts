@@ -10,10 +10,6 @@ export {
   ValibotSchemaAdapter,
   valibotAdapter
 } from './adapters/index.js';
-export type {
-  ZodSchemaInfer,
-  ValibotSchemaInfer
-} from './adapters/index.js';
 export type { ModelOptions } from './model/index.js';
 export type { StandardSchemaV1 } from './types/standard-schema.js';
 

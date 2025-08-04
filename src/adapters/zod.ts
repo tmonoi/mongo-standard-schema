@@ -4,14 +4,6 @@ import { StandardSchemaAdapter } from './standard-schema-adapter.js';
 import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
 /**
- * Type helper for Zod schemas
- */
-export interface ZodSchemaInfer<TSchema extends z.ZodType> {
-  input: z.input<TSchema>;
-  output: z.output<TSchema>;
-}
-
-/**
  * Zod adapter implementation
  */
 export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInput, TOutput> {

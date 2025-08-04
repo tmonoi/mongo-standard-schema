@@ -5,14 +5,6 @@ import { StandardSchemaAdapter } from './standard-schema-adapter.js';
 import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
 /**
- * Type helper for Valibot schemas
- */
-export interface ValibotSchemaInfer<TSchema extends BaseSchema<any, any, any>> {
-  input: InferInput<TSchema>;
-  output: InferOutput<TSchema>;
-}
-
-/**
  * Valibot schema adapter implementation
  */
 export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>

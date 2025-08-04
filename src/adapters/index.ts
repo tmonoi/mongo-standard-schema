@@ -4,12 +4,10 @@ export { StandardSchemaAdapter } from './standard-schema-adapter.js';
 export {
   ZodAdapter,
   ZodSchemaAdapter,
-  zodAdapter,
-  type ZodSchemaInfer
+  zodAdapter
 } from './zod.js';
 export {
   ValibotAdapter,
   ValibotSchemaAdapter,
-  valibotAdapter,
-  type ValibotSchemaInfer
+  valibotAdapter
 } from './valibot.js';
