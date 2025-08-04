@@ -3,6 +3,23 @@ import type { SchemaAdapter } from './base.js';
 import type { AdapterFactory } from './factory.js';
 
 /**
+ * Type helper for Zod schemas
+ */
+export interface ZodSchemaInfer<TSchema extends z.ZodType> {
+  input: z.input<TSchema>;
+  output: z.output<TSchema>;
+}
+
+/**
+ * Zod-specific adapter factory interface
+ */
+export interface ZodAdapterFactory extends AdapterFactory<z.ZodType> {
+  create<TSchema extends z.ZodType>(
+    schema: TSchema
+  ): SchemaAdapter<z.input<TSchema>, z.output<TSchema>>;
+}
+
+/**
  * Zod adapter implementation
  */
 export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInput, TOutput> {
@@ -93,9 +110,9 @@ export function zodAdapter<TInput, TOutput = TInput>(
 /**
  * Zod adapter factory
  */
-export const zodAdapterFactory: AdapterFactory = {
+export const zodAdapterFactory: ZodAdapterFactory = {
   name: 'zod',
-  create(schema) {
-    return new ZodAdapter(schema as z.ZodType);
+  create<TSchema extends z.ZodType>(schema: TSchema) {
+    return new ZodAdapter(schema) as SchemaAdapter<z.input<TSchema>, z.output<TSchema>>;
   }
 };

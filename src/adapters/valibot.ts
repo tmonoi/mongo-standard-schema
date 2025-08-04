@@ -4,6 +4,23 @@ import type { SchemaAdapter } from './base.js';
 import type { AdapterFactory } from './factory.js';
 
 /**
+ * Type helper for Valibot schemas
+ */
+export interface ValibotSchemaInfer<TSchema extends BaseSchema<any, any, any>> {
+  input: InferInput<TSchema>;
+  output: InferOutput<TSchema>;
+}
+
+/**
+ * Valibot-specific adapter factory interface
+ */
+export interface ValibotAdapterFactory extends AdapterFactory<BaseSchema<unknown, unknown, v.BaseIssue<unknown>>> {
+  create<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
+    schema: TSchema
+  ): SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>>;
+}
+
+/**
  * Valibot adapter implementation
  */
 export class ValibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>
@@ -92,9 +109,9 @@ export function valibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.Ba
 /**
  * Valibot adapter factory
  */
-export const valibotAdapterFactory: AdapterFactory = {
+export const valibotAdapterFactory: ValibotAdapterFactory = {
   name: 'valibot',
-  create(schema) {
-    return new ValibotAdapter(schema as BaseSchema<unknown, unknown, v.BaseIssue<unknown>>);
+  create<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(schema: TSchema) {
+    return new ValibotAdapter(schema) as SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>>;
   }
 };

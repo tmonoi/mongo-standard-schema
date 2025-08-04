@@ -1,8 +1,26 @@
 import type { Db, MongoClient } from 'mongodb';
+import type { z } from 'zod';
+import type { BaseSchema, InferInput as VInferInput, InferOutput as VInferOutput } from 'valibot';
 import type { SchemaAdapter } from '../adapters/base.js';
 import type { AdapterFactory } from '../adapters/factory.js';
-import type { InferSchema } from '../adapters/types.js';
+import type { ZodAdapterFactory } from '../adapters/zod.js';
+import type { ValibotAdapterFactory } from '../adapters/valibot.js';
 import { Model, type ModelOptions } from '../model/index.js';
+
+/**
+ * Type helper to extract schema type from adapter factory
+ */
+type ExtractSchemaType<T> = T extends AdapterFactory<infer S> ? S : any;
+
+/**
+ * Type helper to infer model types based on schema type
+ */
+type InferModelTypes<TSchema> =
+  TSchema extends z.ZodType<any, any, any>
+    ? { input: z.input<TSchema>; output: z.output<TSchema> }
+    : TSchema extends BaseSchema<any, any, any>
+    ? { input: VInferInput<TSchema>; output: VInferOutput<TSchema> }
+    : { input: any; output: any };
 
 /**
  * Main client class for mongo-standard-schema
@@ -32,16 +50,16 @@ export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
   /**
    * Create a model with schema
    */
-  model<TSchema>(
+  model<TSchema extends ExtractSchemaType<TAdapterFactory>>(
     collectionName: string,
     schema: TSchema,
     options?: ModelOptions,
-  ): Model<InferSchema<TSchema>['input'], InferSchema<TSchema>['output']> {
+  ): Model<
+    InferModelTypes<TSchema>['input'],
+    InferModelTypes<TSchema>['output']
+  > {
     const adapter = this.adapterFactory.create(schema);
-    return new Model(this.db, collectionName, adapter, options) as Model<
-      InferSchema<TSchema>['input'],
-      InferSchema<TSchema>['output']
-    >;
+    return new Model(this.db, collectionName, adapter, options) as any;
   }
 
   /**
