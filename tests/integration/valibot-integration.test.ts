@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import * as v from 'valibot';
-import { Client, ValibotAdapter } from '../../src/index.js';
+import { Client, valibotAdapter } from '../../src/index.js';
 
 describe('Valibot Integration', () => {
   let client: Client;
@@ -8,8 +8,7 @@ describe('Valibot Integration', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    const valibotAdapter = new ValibotAdapter();
-    client = Client.initialize(testDb, valibotAdapter);
+    client = Client.initialize(testDb);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
@@ -27,7 +26,7 @@ describe('Valibot Integration', () => {
       email: v.pipe(v.string(), v.email()),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
 
     // Test insertOne - _id should be optional
     const doc1 = await User.insertOne({
@@ -67,7 +66,7 @@ describe('Valibot Integration', () => {
       email: v.pipe(v.string(), v.email()),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
 
     // Test validation failure - negative age
     await expect(
@@ -106,7 +105,7 @@ describe('Valibot Integration', () => {
       status: v.optional(v.string(), 'active'),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
 
     const doc = await User.insertOne({
       name: 'John',
@@ -131,7 +130,7 @@ describe('Valibot Integration', () => {
       metadata: v.optional(v.record(v.string(), v.unknown())),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
 
     const doc = await User.insertOne({
       name: 'John',
@@ -180,7 +179,7 @@ describe('Valibot Integration', () => {
       ]),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
 
     const adminUser = await User.insertOne({
       name: 'Admin',
@@ -212,8 +211,8 @@ describe('Valibot Integration', () => {
       createdAt: v.pipe(v.string(), v.isoTimestamp()),
     });
 
-    const User = client.model('users', userSchema);
-    const Post = client.model('posts', postSchema);
+    const User = client.model('users', valibotAdapter(userSchema));
+    const Post = client.model('posts', valibotAdapter(postSchema));
 
     // Create a user
     const user = await User.insertOne({

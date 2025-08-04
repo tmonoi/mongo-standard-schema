@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 import * as v from 'valibot';
-import { Client, ValibotAdapter } from '../src/index.js';
+import { Client, valibotAdapter } from '../src/index.js';
 
 // Define a Valibot schema
 const UserSchema = v.object({
@@ -24,12 +24,11 @@ async function main() {
   
   const db = mongoClient.db('myapp');
   
-  // Initialize client with Valibot adapter
-  const valibotAdapter = new ValibotAdapter();
-  const client = Client.initialize(db, valibotAdapter, mongoClient);
+  // Initialize client
+  const client = Client.initialize(db, mongoClient);
   
-  // Create a model
-  const User = client.model('users', UserSchema);
+  // Create a model with Valibot adapter
+  const User = client.model('users', valibotAdapter(UserSchema));
   
   // Insert a document
   const newUser = await User.insertOne({

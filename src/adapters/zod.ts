@@ -1,7 +1,5 @@
-import { type z, ZodObject, type ZodType } from 'zod';
+import { type z, ZodObject } from 'zod';
 import type { Adapter } from './base.js';
-import { StandardSchemaAdapter } from './standard-schema-adapter.js';
-import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
 /**
  * Zod adapter implementation
@@ -79,30 +77,6 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
   ): ZodSchemaAdapter<TInput, TOutput> {
     return new ZodSchemaAdapter(schema);
-  }
-}
-
-/**
- * Zod adapter for Standard Schema
- */
-export class ZodAdapter extends StandardSchemaAdapter {
-  readonly name = 'zod';
-
-  supports(schema: unknown): boolean {
-    // Check if it's a Zod schema
-    return (
-      typeof schema === 'object' &&
-      schema !== null &&
-      '_def' in schema &&
-      typeof (schema as any)._def === 'object'
-    );
-  }
-
-  create(schema: unknown): Adapter<unknown, unknown> {
-    if (this.supports(schema)) {
-      return new ZodSchemaAdapter(schema as z.ZodType);
-    }
-    throw new Error(`Schema is not supported by ${this.name} adapter`);
   }
 }
 

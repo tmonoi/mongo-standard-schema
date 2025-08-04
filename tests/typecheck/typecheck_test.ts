@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 // import { Client } from 'mongo-standard-schema';
-import { Client, ZodAdapter } from '../../src/index.js';
+import { Client, zodAdapter } from '../../src/index.js';
 
 describe.skip('This is a typecheck test so type check only.', () => {
   let client: Client;
@@ -9,8 +9,7 @@ describe.skip('This is a typecheck test so type check only.', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    const zodAdapter = new ZodAdapter();
-    client = Client.initialize(testDb, zodAdapter);
+    client = Client.initialize(testDb);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
@@ -26,7 +25,7 @@ describe.skip('This is a typecheck test so type check only.', () => {
       age: z.number(),
       email: z.string().optional(),
     });
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     // ✅ Valid insertOne calls - should not cause TypeScript errors
     const validUser1 = await User.insertOne({

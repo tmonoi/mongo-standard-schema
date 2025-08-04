@@ -1,8 +1,6 @@
 import type { BaseSchema, InferInput, InferOutput } from 'valibot';
 import * as v from 'valibot';
 import type { Adapter } from './base.js';
-import { StandardSchemaAdapter } from './standard-schema-adapter.js';
-import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
 /**
  * Valibot schema adapter implementation
@@ -78,32 +76,6 @@ export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v
     schema: TSchema,
   ): ValibotSchemaAdapter<TSchema> {
     return new ValibotSchemaAdapter(schema);
-  }
-}
-
-/**
- * Valibot adapter for Standard Schema
- */
-export class ValibotAdapter extends StandardSchemaAdapter {
-  readonly name = 'valibot';
-
-  supports(schema: unknown): boolean {
-    // Check if it's a Valibot schema
-    return (
-      typeof schema === 'object' &&
-      schema !== null &&
-      'kind' in schema &&
-      typeof (schema as any).kind === 'string' &&
-      'async' in schema &&
-      typeof (schema as any).async === 'boolean'
-    );
-  }
-
-  create(schema: unknown): Adapter<unknown, unknown> {
-    if (this.supports(schema)) {
-      return new ValibotSchemaAdapter(schema as BaseSchema<unknown, unknown, v.BaseIssue<unknown>>);
-    }
-    throw new Error(`Schema is not supported by ${this.name} adapter`);
   }
 }
 

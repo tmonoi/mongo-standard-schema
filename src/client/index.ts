@@ -1,22 +1,6 @@
 import type { Db, MongoClient } from 'mongodb';
-import type { z } from 'zod';
-import type { BaseSchema, InferInput as VInferInput, InferOutput as VInferOutput } from 'valibot';
 import type { Adapter } from '../adapters/base.js';
-import type { StandardSchemaAdapter } from '../adapters/standard-schema-adapter.js';
-import type { StandardSchemaV1, InferStandardInput, InferStandardOutput } from '../types/standard-schema.js';
 import { Model, type ModelOptions } from '../model/index.js';
-
-/**
- * Type helper to infer model types based on schema
- */
-type InferModelTypes<TSchema> =
-  TSchema extends z.ZodType<any, any, any>
-    ? { input: z.input<TSchema>; output: z.output<TSchema> }
-    : TSchema extends BaseSchema<any, any, any>
-    ? { input: VInferInput<TSchema>; output: VInferOutput<TSchema> }
-    : TSchema extends StandardSchemaV1<infer Input, infer Output>
-    ? { input: Input; output: Output }
-    : { input: unknown; output: unknown };
 
 /**
  * Main client class for mongo-standard-schema
@@ -26,40 +10,30 @@ export class Client {
 
   constructor(
     private db: Db,
-    private adapter: StandardSchemaAdapter,
     mongoClient?: MongoClient
   ) {
     this.mongoClient = mongoClient;
   }
 
   /**
-   * Initialize client with MongoDB database connection and adapter
+   * Initialize client with MongoDB database connection
    */
   static initialize(
     db: Db,
-    adapter: StandardSchemaAdapter,
     mongoClient?: MongoClient
   ): Client {
-    return new Client(db, adapter, mongoClient);
+    return new Client(db, mongoClient);
   }
 
   /**
-   * Create a model with schema
+   * Create a model with schema and adapter
    */
-  model<TSchema>(
+  model<TInput, TOutput = TInput>(
     collectionName: string,
-    schema: TSchema,
+    adapter: Adapter<TInput, TOutput>,
     options?: ModelOptions,
-  ): Model<
-    InferModelTypes<TSchema>['input'],
-    InferModelTypes<TSchema>['output']
-  > {
-    if (!this.adapter.supports(schema)) {
-      throw new Error(`Schema is not supported by ${this.adapter.name} adapter`);
-    }
-    
-    const adapter = this.adapter.create(schema);
-    return new Model(this.db, collectionName, adapter, options) as any;
+  ): Model<TInput, TOutput> {
+    return new Model(this.db, collectionName, adapter, options);
   }
 
   /**
@@ -69,12 +43,6 @@ export class Client {
     return this.db;
   }
 
-  /**
-   * Get the current adapter
-   */
-  getAdapter(): StandardSchemaAdapter {
-    return this.adapter;
-  }
 
   /**
    * Close the database connection

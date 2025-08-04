@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 
 // import { Client } from 'mongo-standard-schema';
-import { Client, ZodAdapter } from '../../src/index.js';
+import { Client, zodAdapter } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
   let client: Client;
@@ -11,8 +11,7 @@ describe('Sample Code Integration', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    const zodAdapter = new ZodAdapter();
-    client = Client.initialize(testDb, zodAdapter);
+    client = Client.initialize(testDb);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
@@ -28,7 +27,7 @@ describe('Sample Code Integration', () => {
       name: z.string(),
       age: z.number(),
     });
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test insertOne - _id should be optional
     const doc1 = await User.insertOne({
@@ -84,7 +83,7 @@ describe('Sample Code Integration', () => {
       name: z.string(),
       age: z.number(),
     });
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test validation failure
     await expect(
@@ -110,7 +109,7 @@ describe('Sample Code Integration', () => {
       name: z.string(),
       age: z.number(),
     });
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test insertMany
     const docs = await User.insertMany([
@@ -156,7 +155,7 @@ describe('Sample Code Integration', () => {
       name: z.string(),
       age: z.number().default(() => 18),
     });
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
       name: 'John',
@@ -181,7 +180,7 @@ describe('Sample Code Integration', () => {
       })).default([]),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
       tags: [
