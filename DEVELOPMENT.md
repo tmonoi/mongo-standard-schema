@@ -61,6 +61,27 @@ export interface AdapterFactory<TSchemaType = any> {
 - ユーザー向けAPIでは`_id`は常に文字列として扱う
 - 内部的にはMongoDBのObjectIdに変換
 - 型推論は可能な限り自動化し、手動での型定義を不要にする
+- **`any`型の使用を避ける**: 型安全性を損なうため、`unknown`や適切なジェネリクスを使用
+
+**`any`型を避ける理由**:
+- 型チェックが無効になり、実行時エラーの原因となる
+- IDEの補完機能が働かなくなる
+- リファクタリング時に問題を見逃しやすくなる
+
+**代替案**:
+```typescript
+// ❌ 悪い例
+export interface AdapterFactory<TSchemaType = any> {
+  create<TSchema extends TSchemaType>(schema: TSchema): SchemaAdapter<any, any>;
+}
+
+// ✅ 良い例
+export interface AdapterFactory<TSchemaType = unknown> {
+  create<TSchema extends TSchemaType>(
+    schema: TSchema
+  ): SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>>;
+}
+```
 
 ### 4. テスト戦略
 
@@ -69,11 +90,45 @@ export interface AdapterFactory<TSchemaType = any> {
 2. **統合テスト**: 実際のMongoDBとの連携をテスト
 3. **型チェックテスト**: `@ts-expect-error`を使用して型エラーが正しく検出されることを確認
 
-**型チェックテストの例**:
+#### typecheck_testの目的
+
+`tests/typecheck/typecheck_test.ts`は、TypeScriptの型システムが正しく動作していることを確認するための特別なテストファイルです。
+
+**主な目的**:
+1. **型推論の検証**: 型が正しく推論されているか確認
+2. **型エラーの検出**: 不正な型の使用が適切にエラーになるか確認
+3. **APIの型安全性**: ユーザーが間違った使い方をした時にコンパイルエラーになるか確認
+
+**実装方法**:
 ```typescript
-// @ts-expect-error - missing required field
-await User.insertOne({ age: 30 });
+describe.skip('This is a typecheck test so type check only.', () => {
+  test('should provide proper TypeScript type checking', async () => {
+    // ✅ 正しい使用例 - エラーが出ないことを確認
+    const validUser = await User.insertOne({
+      name: 'John',
+      age: 30,
+    });
+
+    // ❌ 間違った使用例 - エラーが出ることを確認
+    // @ts-expect-error - missing required field 'name'
+    await User.insertOne({
+      age: 30,
+    });
+
+    // @ts-expect-error - wrong type for 'age'
+    await User.insertOne({
+      name: 'Alice',
+      age: 'thirty', // 数値であるべき
+    });
+  });
+});
 ```
+
+**重要な注意点**:
+- `describe.skip`を使用して実行時はスキップ（型チェックのみ実行）
+- `@ts-expect-error`コメントは、その次の行でTypeScriptエラーが発生することを期待
+- エラーが発生しない場合、`@ts-expect-error`自体がエラーになる（未使用の抑制）
+- これにより、型システムの退行を防ぐことができる
 
 ### 5. エラーハンドリング
 
