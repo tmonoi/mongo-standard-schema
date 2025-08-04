@@ -1,5 +1,6 @@
 import { type z, ZodObject } from 'zod';
 import type { SchemaAdapter } from './base.js';
+import type { AdapterFactory } from './factory.js';
 
 /**
  * Zod adapter implementation
@@ -88,3 +89,13 @@ export function zodAdapter<TInput, TOutput = TInput>(
 ): ZodAdapter<TInput, TOutput> {
   return ZodAdapter.create(schema);
 }
+
+/**
+ * Zod adapter factory
+ */
+export const zodAdapterFactory: AdapterFactory = {
+  name: 'zod',
+  create(schema) {
+    return new ZodAdapter(schema as z.ZodType);
+  }
+};

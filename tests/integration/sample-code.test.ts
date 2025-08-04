@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 
 // import { Client } from 'mongo-standard-schema';
-import { Client } from '../../src/index.js';
+import { Client, zodAdapterFactory } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
   let client: Client;
@@ -11,7 +11,7 @@ describe('Sample Code Integration', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    client = Client.initialize(testDb);
+    client = Client.initialize(testDb, zodAdapterFactory);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
@@ -93,8 +93,7 @@ describe('Sample Code Integration', () => {
     await expect(
       User.insertOne({
         name: 'John',
-        // @ts-expect-error - wrong type for 'age'
-        age: 'invalid',
+        age: 'invalid' as any,
       }),
     ).rejects.toThrow();
 

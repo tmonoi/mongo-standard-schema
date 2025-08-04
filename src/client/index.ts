@@ -1,46 +1,42 @@
 import type { Db, MongoClient } from 'mongodb';
-import type { z } from 'zod';
-import type { InferOutput, SchemaAdapter } from '../adapters/base.js';
-import { ZodAdapter } from '../adapters/zod.js';
+import type { SchemaAdapter } from '../adapters/base.js';
+import type { AdapterFactory } from '../adapters/factory.js';
 import { Model, type ModelOptions } from '../model/index.js';
 
 /**
  * Main client class for mongo-standard-schema
  */
-export class Client {
+export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
   private mongoClient: MongoClient | undefined;
 
-  constructor(private db: Db, mongoClient?: MongoClient) {
+  constructor(
+    private db: Db,
+    private adapterFactory: TAdapterFactory,
+    mongoClient?: MongoClient
+  ) {
     this.mongoClient = mongoClient;
   }
 
   /**
-   * Initialize client with MongoDB database connection
+   * Initialize client with MongoDB database connection and adapter factory
    */
-  static initialize(db: Db, mongoClient?: MongoClient): Client {
-    return new Client(db, mongoClient);
+  static initialize<TAdapterFactory extends AdapterFactory>(
+    db: Db,
+    adapterFactory: TAdapterFactory,
+    mongoClient?: MongoClient
+  ): Client<TAdapterFactory> {
+    return new Client(db, adapterFactory, mongoClient);
   }
 
   /**
-   * Create a model with Zod schema
+   * Create a model with schema
    */
-  model<TSchema extends z.ZodType>(
+  model<TSchema>(
     collectionName: string,
     schema: TSchema,
     options?: ModelOptions,
-  ): Model<z.input<TSchema>, z.output<TSchema>> {
-    const adapter = new ZodAdapter(schema);
-    return new Model(this.db, collectionName, adapter, options);
-  }
-
-  /**
-   * Create a model with custom schema adapter
-   */
-  modelWithAdapter<TInput, TOutput = TInput>(
-    collectionName: string,
-    adapter: SchemaAdapter<TInput, TOutput>,
-    options?: ModelOptions,
-  ): Model<TInput, TOutput> {
+  ): Model<any, any> {
+    const adapter = this.adapterFactory.create(schema);
     return new Model(this.db, collectionName, adapter, options);
   }
 
@@ -49,6 +45,13 @@ export class Client {
    */
   getDb(): Db {
     return this.db;
+  }
+
+  /**
+   * Get the current adapter factory
+   */
+  getAdapterFactory(): TAdapterFactory {
+    return this.adapterFactory;
   }
 
   /**

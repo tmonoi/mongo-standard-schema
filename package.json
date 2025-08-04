@@ -18,7 +18,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -35,7 +37,15 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run test"
   },
-  "keywords": ["mongodb", "typescript", "schema", "validation", "zod", "type-safe", "database"],
+  "keywords": [
+    "mongodb",
+    "typescript",
+    "schema",
+    "validation",
+    "zod",
+    "type-safe",
+    "database"
+  ],
   "author": "tmonoi",
   "license": "MIT",
   "engines": {
@@ -43,7 +53,16 @@
   },
   "peerDependencies": {
     "mongodb": "^5.0.0 || ^6.0.0",
-    "zod": "^3.20.0"
+    "zod": "^3.20.0",
+    "valibot": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    },
+    "valibot": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "^1.4.1",
@@ -52,6 +71,7 @@
     "mongodb-memory-server": "^9.1.4",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
+    "valibot": "^1.1.0",
     "vitest": "^1.1.0",
     "zod": "^3.22.4"
   },

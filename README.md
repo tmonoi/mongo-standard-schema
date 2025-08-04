@@ -5,28 +5,36 @@ Type-safe MongoDB client library with support for multiple validation libraries.
 ## Features
 
 - 🔒 **Type-safe**: Full TypeScript support with schema validation
-- 🔄 **Multiple validation libraries**: Currently supports Zod (more coming soon)
+- 🔄 **Multiple validation libraries**: Supports Zod and Valibot
 - 🎯 **MongoDB-native**: Built on top of the official MongoDB driver
 - 🚀 **Easy to use**: Simple API inspired by Papr
 - 🔧 **Flexible**: Support for custom schema adapters
+- 🔌 **Pluggable**: Choose your validation library via adapter pattern
 
 ## Installation
 
 ```bash
-npm install mongo-standard-schema mongodb zod
+npm install mongo-standard-schema mongodb
+
+# Install the validation library of your choice
+npm install zod
+# or
+npm install valibot
 ```
 
 ## Quick Start
 
+### Using Zod
+
 ```typescript
 import { MongoClient } from 'mongodb';
-import { Client } from 'mongo-standard-schema';
+import { Client, zodAdapterFactory } from 'mongo-standard-schema';
 import { z } from 'zod';
 
 // Connect to MongoDB
 const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
 const dbConnection = mongoClient.db('myapp');
-const client = Client.initialize(dbConnection);
+const client = Client.initialize(dbConnection, zodAdapterFactory);
 
 // Define your schema
 const User = client.model(
@@ -63,13 +71,52 @@ await User.updateOne(
 await User.deleteOne({ _id: user._id });
 ```
 
+### Using Valibot
+
+```typescript
+import { MongoClient } from 'mongodb';
+import { Client, valibotAdapterFactory } from 'mongo-standard-schema';
+import * as v from 'valibot';
+
+// Connect to MongoDB
+const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
+const dbConnection = mongoClient.db('myapp');
+const client = Client.initialize(dbConnection, valibotAdapterFactory);
+
+// Define your schema
+const User = client.model(
+  'users',
+  v.object({
+    _id: v.string(),
+    name: v.string(),
+    age: v.pipe(v.number(), v.minValue(0)),
+    email: v.pipe(v.string(), v.email()),
+  })
+);
+
+// The rest of the API is identical!
+const user = await User.insertOne({
+  name: 'Jane Doe',
+  age: 25,
+  email: 'jane@example.com',
+});
+```
+
 ## API Reference
 
 ### Client
 
-#### `Client.initialize(db: Db): Client`
+#### `Client.initialize(db: Db, adapterFactory: AdapterFactory): Client`
 
-Initialize a new client with a MongoDB database connection.
+Initialize a new client with a MongoDB database connection and an adapter factory.
+
+```typescript
+// For Zod
+const client = Client.initialize(db, zodAdapterFactory);
+
+// For Valibot
+const client = Client.initialize(db, valibotAdapterFactory);
+```
 
 #### `client.model<TSchema>(collectionName: string, schema: TSchema, options?: ModelOptions): Model`
 
@@ -261,9 +308,67 @@ MIT
 
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
 
+## Advanced Usage
+
+### Custom Schema Adapters
+
+You can create custom schema adapters for other validation libraries:
+
+```typescript
+import { SchemaAdapter, AdapterFactory } from 'mongo-standard-schema';
+
+class MyCustomAdapter implements SchemaAdapter<Input, Output> {
+  parse(data: unknown): Output {
+    // Implement validation
+  }
+  
+  safeParse(data: unknown) {
+    // Implement safe validation
+  }
+  
+  partial() {
+    // Implement partial schema
+  }
+  
+  optional() {
+    // Implement optional schema
+  }
+  
+  getSchema() {
+    // Return the original schema
+  }
+}
+
+const myAdapterFactory: AdapterFactory = {
+  name: 'custom',
+  create(schema) {
+    return new MyCustomAdapter(schema);
+  }
+};
+
+const client = Client.initialize(db, myAdapterFactory);
+```
+
+### Using Multiple Adapters
+
+You can use different validation libraries for different collections:
+
+```typescript
+// Create separate clients for different adapters
+const zodClient = Client.initialize(db, zodAdapterFactory);
+const valibotClient = Client.initialize(db, valibotAdapterFactory);
+
+// Use Zod for users
+const User = zodClient.model('users', userZodSchema);
+
+// Use Valibot for products
+const Product = valibotClient.model('products', productValibotSchema);
+```
+
 ## Roadmap
 
-- [ ] Support for Valibot
+- [x] Support for Zod
+- [x] Support for Valibot
 - [ ] Support for ArkType
 - [ ] Aggregation pipeline support
 - [ ] Bulk operations
