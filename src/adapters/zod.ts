@@ -1,4 +1,4 @@
-import { type z, ZodObject } from 'zod';
+import { type z, ZodObject, type ZodType } from 'zod';
 import type { SchemaAdapter } from './base.js';
 import type { AdapterFactory } from './factory.js';
 

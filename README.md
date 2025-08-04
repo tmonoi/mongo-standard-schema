@@ -274,6 +274,73 @@ This is particularly useful when:
 - You want to ensure data consistency when reading from the database
 - You're working with data that might have been modified outside your application
 
+## Type Inference
+
+One of the most powerful features of mongo-standard-schema is automatic type inference. You don't need to manually define TypeScript interfaces - they are automatically derived from your validation schemas.
+
+### How It Works
+
+```typescript
+// Define your schema once
+const userSchema = z.object({
+  _id: z.string(),
+  name: z.string(),
+  age: z.number().min(0),
+  email: z.string().email(),
+  isActive: z.boolean().default(true),
+});
+
+// Create a model - types are automatically inferred
+const User = client.model('users', userSchema);
+
+// TypeScript knows exactly what fields are required/optional
+await User.insertOne({
+  name: 'John',
+  age: 30,
+  email: 'john@example.com',
+  // isActive is optional with default value
+});
+
+// TypeScript catches errors at compile time
+// These would cause TypeScript errors:
+// await User.insertOne({ name: 123 }); // Error: name must be string
+// await User.insertOne({ age: '30' }); // Error: age must be number
+```
+
+### Benefits
+
+1. **No Manual Type Definitions**: Your validation schema IS your type definition
+2. **Single Source of Truth**: No risk of types and runtime validation getting out of sync
+3. **Full IntelliSense Support**: Your IDE knows all available fields and their types
+4. **Compile-Time Safety**: Catch errors before runtime
+5. **Works with Any Validation Library**: The adapter pattern preserves type information
+
+### Complex Types
+
+Type inference works with complex nested structures:
+
+```typescript
+const postSchema = z.object({
+  _id: z.string(),
+  title: z.string(),
+  author: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  tags: z.array(z.string()),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const Post = client.model('posts', postSchema);
+
+// TypeScript infers the entire nested structure
+const post = await Post.findOne({ 'author.name': 'John' });
+if (post) {
+  console.log(post.author.name); // TypeScript knows this path exists
+  console.log(post.tags[0]); // TypeScript knows tags is string[]
+}
+```
+
 ## Development
 
 ```bash

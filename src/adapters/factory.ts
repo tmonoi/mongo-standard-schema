@@ -1,3 +1,5 @@
+import type { SchemaAdapter } from './base.js';
+
 /**
  * Factory interface for creating schema adapters
  */
@@ -12,5 +14,3 @@ export interface AdapterFactory {
    */
   readonly name: string;
 }
-
-import type { SchemaAdapter } from './base.js';

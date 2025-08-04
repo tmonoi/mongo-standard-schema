@@ -1,6 +1,7 @@
 import type { Db, MongoClient } from 'mongodb';
 import type { SchemaAdapter } from '../adapters/base.js';
 import type { AdapterFactory } from '../adapters/factory.js';
+import type { InferSchema } from '../adapters/types.js';
 import { Model, type ModelOptions } from '../model/index.js';
 
 /**
@@ -35,9 +36,12 @@ export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
     collectionName: string,
     schema: TSchema,
     options?: ModelOptions,
-  ): Model<any, any> {
+  ): Model<InferSchema<TSchema>['input'], InferSchema<TSchema>['output']> {
     const adapter = this.adapterFactory.create(schema);
-    return new Model(this.db, collectionName, adapter, options);
+    return new Model(this.db, collectionName, adapter, options) as Model<
+      InferSchema<TSchema>['input'],
+      InferSchema<TSchema>['output']
+    >;
   }
 
   /**
