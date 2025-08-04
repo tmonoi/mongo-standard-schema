@@ -2,55 +2,51 @@ import type { Db, MongoClient } from 'mongodb';
 import type { z } from 'zod';
 import type { BaseSchema, InferInput as VInferInput, InferOutput as VInferOutput } from 'valibot';
 import type { SchemaAdapter } from '../adapters/base.js';
-import type { AdapterFactory } from '../adapters/factory.js';
-import type { ZodAdapterFactory } from '../adapters/zod.js';
-import type { ValibotAdapterFactory } from '../adapters/valibot.js';
+import type { StandardSchemaAdapter } from '../adapters/standard-schema-adapter.js';
+import type { StandardSchemaV1, InferStandardInput, InferStandardOutput } from '../types/standard-schema.js';
 import { Model, type ModelOptions } from '../model/index.js';
 
 /**
- * Type helper to extract schema type from adapter factory
- */
-type ExtractSchemaType<T> = T extends AdapterFactory<infer S> ? S : any;
-
-/**
- * Type helper to infer model types based on schema type
+ * Type helper to infer model types based on schema
  */
 type InferModelTypes<TSchema> =
   TSchema extends z.ZodType<any, any, any>
     ? { input: z.input<TSchema>; output: z.output<TSchema> }
     : TSchema extends BaseSchema<any, any, any>
     ? { input: VInferInput<TSchema>; output: VInferOutput<TSchema> }
-    : { input: any; output: any };
+    : TSchema extends StandardSchemaV1<infer Input, infer Output>
+    ? { input: Input; output: Output }
+    : { input: unknown; output: unknown };
 
 /**
  * Main client class for mongo-standard-schema
  */
-export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
+export class Client {
   private mongoClient: MongoClient | undefined;
 
   constructor(
     private db: Db,
-    private adapterFactory: TAdapterFactory,
+    private adapter: StandardSchemaAdapter,
     mongoClient?: MongoClient
   ) {
     this.mongoClient = mongoClient;
   }
 
   /**
-   * Initialize client with MongoDB database connection and adapter factory
+   * Initialize client with MongoDB database connection and adapter
    */
-  static initialize<TAdapterFactory extends AdapterFactory>(
+  static initialize(
     db: Db,
-    adapterFactory: TAdapterFactory,
+    adapter: StandardSchemaAdapter,
     mongoClient?: MongoClient
-  ): Client<TAdapterFactory> {
-    return new Client(db, adapterFactory, mongoClient);
+  ): Client {
+    return new Client(db, adapter, mongoClient);
   }
 
   /**
    * Create a model with schema
    */
-  model<TSchema extends ExtractSchemaType<TAdapterFactory>>(
+  model<TSchema>(
     collectionName: string,
     schema: TSchema,
     options?: ModelOptions,
@@ -58,8 +54,12 @@ export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
     InferModelTypes<TSchema>['input'],
     InferModelTypes<TSchema>['output']
   > {
-    const adapter = this.adapterFactory.create(schema);
-    return new Model(this.db, collectionName, adapter, options) as any;
+    if (!this.adapter.supports(schema)) {
+      throw new Error(`Schema is not supported by ${this.adapter.name} adapter`);
+    }
+    
+    const schemaAdapter = this.adapter.create(schema);
+    return new Model(this.db, collectionName, schemaAdapter, options) as any;
   }
 
   /**
@@ -70,10 +70,10 @@ export class Client<TAdapterFactory extends AdapterFactory = AdapterFactory> {
   }
 
   /**
-   * Get the current adapter factory
+   * Get the current adapter
    */
-  getAdapterFactory(): TAdapterFactory {
-    return this.adapterFactory;
+  getAdapter(): StandardSchemaAdapter {
+    return this.adapter;
   }
 
   /**

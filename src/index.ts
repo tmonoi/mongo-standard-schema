@@ -1,15 +1,21 @@
 // Main entry point for mongo-standard-schema
 export { Client } from './client/index.js';
-export type { SchemaAdapter, AdapterFactory, InferInput, InferOutput } from './adapters/index.js';
+export type { SchemaAdapter, InferInput, InferOutput } from './adapters/index.js';
+export { StandardSchemaAdapter } from './adapters/index.js';
 export {
   ZodAdapter,
+  ZodSchemaAdapter,
   zodAdapter,
-  zodAdapterFactory,
   ValibotAdapter,
-  valibotAdapter,
-  valibotAdapterFactory
+  ValibotSchemaAdapter,
+  valibotAdapter
+} from './adapters/index.js';
+export type {
+  ZodSchemaInfer,
+  ValibotSchemaInfer
 } from './adapters/index.js';
 export type { ModelOptions } from './model/index.js';
+export type { StandardSchemaV1 } from './types/standard-schema.js';
 
 // Re-export types
 export type {

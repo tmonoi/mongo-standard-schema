@@ -1,7 +1,8 @@
 import type { BaseSchema, InferInput, InferOutput } from 'valibot';
 import * as v from 'valibot';
 import type { SchemaAdapter } from './base.js';
-import type { AdapterFactory } from './factory.js';
+import { StandardSchemaAdapter } from './standard-schema-adapter.js';
+import type { StandardSchemaV1 } from '../types/standard-schema.js';
 
 /**
  * Type helper for Valibot schemas
@@ -12,18 +13,9 @@ export interface ValibotSchemaInfer<TSchema extends BaseSchema<any, any, any>> {
 }
 
 /**
- * Valibot-specific adapter factory interface
+ * Valibot schema adapter implementation
  */
-export interface ValibotAdapterFactory extends AdapterFactory<BaseSchema<unknown, unknown, v.BaseIssue<unknown>>> {
-  create<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-    schema: TSchema
-  ): SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>>;
-}
-
-/**
- * Valibot adapter implementation
- */
-export class ValibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>
+export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>
   implements SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>> {
   
   constructor(private schema: TSchema) {}
@@ -48,12 +40,12 @@ export class ValibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseI
     }
     
     const partialSchema = v.partial(this.schema as any);
-    return new ValibotAdapter(partialSchema as any) as any;
+    return new ValibotSchemaAdapter(partialSchema as any) as any;
   }
 
   optional(): SchemaAdapter<InferInput<TSchema> | undefined, InferOutput<TSchema> | undefined> {
     const optionalSchema = v.optional(this.schema);
-    return new ValibotAdapter(optionalSchema) as any;
+    return new ValibotSchemaAdapter(optionalSchema) as any;
   }
 
   getSchema(): TSchema {
@@ -88,30 +80,46 @@ export class ValibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseI
   }
 
   /**
-   * Static factory method to create ValibotAdapter from Valibot schema
+   * Static factory method to create ValibotSchemaAdapter from Valibot schema
    */
   static create<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
     schema: TSchema,
-  ): ValibotAdapter<TSchema> {
-    return new ValibotAdapter(schema);
+  ): ValibotSchemaAdapter<TSchema> {
+    return new ValibotSchemaAdapter(schema);
   }
 }
 
 /**
- * Helper function to create ValibotAdapter
+ * Valibot adapter for Standard Schema
+ */
+export class ValibotAdapter extends StandardSchemaAdapter {
+  readonly name = 'valibot';
+
+  supports(schema: unknown): boolean {
+    // Check if it's a Valibot schema
+    return (
+      typeof schema === 'object' &&
+      schema !== null &&
+      'kind' in schema &&
+      typeof (schema as any).kind === 'string' &&
+      'async' in schema &&
+      typeof (schema as any).async === 'boolean'
+    );
+  }
+
+  create(schema: unknown): SchemaAdapter<unknown, unknown> {
+    if (this.supports(schema)) {
+      return new ValibotSchemaAdapter(schema as BaseSchema<unknown, unknown, v.BaseIssue<unknown>>);
+    }
+    throw new Error(`Schema is not supported by ${this.name} adapter`);
+  }
+}
+
+/**
+ * Helper function to create ValibotSchemaAdapter
  */
 export function valibotAdapter<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
   schema: TSchema,
-): ValibotAdapter<TSchema> {
-  return ValibotAdapter.create(schema);
+): ValibotSchemaAdapter<TSchema> {
+  return ValibotSchemaAdapter.create(schema);
 }
-
-/**
- * Valibot adapter factory
- */
-export const valibotAdapterFactory: ValibotAdapterFactory = {
-  name: 'valibot',
-  create<TSchema extends BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(schema: TSchema) {
-    return new ValibotAdapter(schema) as SchemaAdapter<InferInput<TSchema>, InferOutput<TSchema>>;
-  }
-};

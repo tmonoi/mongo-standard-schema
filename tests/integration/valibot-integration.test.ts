@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import * as v from 'valibot';
-import { Client, valibotAdapterFactory } from '../../src/index.js';
+import { Client, ValibotAdapter } from '../../src/index.js';
 
 describe('Valibot Integration', () => {
   let client: Client;
@@ -8,7 +8,8 @@ describe('Valibot Integration', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    client = Client.initialize(testDb, valibotAdapterFactory);
+    const valibotAdapter = new ValibotAdapter();
+    client = Client.initialize(testDb, valibotAdapter);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();

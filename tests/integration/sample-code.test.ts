@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 
 // import { Client } from 'mongo-standard-schema';
-import { Client, zodAdapterFactory } from '../../src/index.js';
+import { Client, ZodAdapter } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
   let client: Client;
@@ -11,7 +11,8 @@ describe('Sample Code Integration', () => {
   beforeEach(async () => {
     // Use global test database
     const testDb = (globalThis as any).testDb;
-    client = Client.initialize(testDb, zodAdapterFactory);
+    const zodAdapter = new ZodAdapter();
+    client = Client.initialize(testDb, zodAdapter);
 
     // Clear collections before each test
     const collections = await testDb.listCollections().toArray();
@@ -22,14 +23,12 @@ describe('Sample Code Integration', () => {
 
   test('should work exactly as documented in the sample', async () => {
     // Define the User schema exactly as in the sample
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', userSchema);
 
     // Test insertOne - _id should be optional
     const doc1 = await User.insertOne({
@@ -80,14 +79,12 @@ describe('Sample Code Integration', () => {
   });
 
   test('should handle validation correctly', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', userSchema);
 
     // Test validation failure
     await expect(
@@ -108,14 +105,12 @@ describe('Sample Code Integration', () => {
 
 
   test('should handle multiple documents', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', userSchema);
 
     // Test insertMany
     const docs = await User.insertMany([
@@ -156,14 +151,12 @@ describe('Sample Code Integration', () => {
   });
 
   test('should handle default values', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number().default(() => 18),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number().default(() => 18),
+    });
+    const User = client.model('users', userSchema);
 
     const doc = await User.insertOne({
       name: 'John',
