@@ -2,7 +2,7 @@ import type { MongoClient } from 'mongodb';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 
-// import { Client } from 'mongo-standard-schema';
+// import { Client } from 'safe-mongo';
 import { Client, zodAdapter } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {

@@ -2,7 +2,7 @@
 
 ## 概要
 
-mongo-standard-schemaにValibotサポートを追加し、Clientクラスの初期化時にアダプターファクトリーを指定できるようにする。
+safe-mongoにValibotサポートを追加し、Clientクラスの初期化時にアダプターファクトリーを指定できるようにする。
 
 ## 設計方針
 
@@ -208,8 +208,8 @@ type InferValibotOutput<T> = T extends BaseSchema ? Output<T> : never;
 ### Zod
 
 ```typescript
-import { Client } from 'mongo-standard-schema';
-import { zodAdapterFactory } from 'mongo-standard-schema/adapters';
+import { Client } from 'safe-mongo';
+import { zodAdapterFactory } from 'safe-mongo/adapters';
 import { z } from 'zod';
 
 const userSchema = z.object({
@@ -225,8 +225,8 @@ const users = client.model('users', userSchema);
 ### Valibot
 
 ```typescript
-import { Client } from 'mongo-standard-schema';
-import { valibotAdapterFactory } from 'mongo-standard-schema/adapters';
+import { Client } from 'safe-mongo';
+import { valibotAdapterFactory } from 'safe-mongo/adapters';
 import * as v from 'valibot';
 
 const userSchema = v.object({
@@ -257,8 +257,8 @@ const valibotProducts = valibotClient.model('products', valibotProductSchema);
 
 ```typescript
 // app/database.ts
-import { Client } from 'mongo-standard-schema';
-import { valibotAdapterFactory } from 'mongo-standard-schema/adapters';
+import { Client } from 'safe-mongo';
+import { valibotAdapterFactory } from 'safe-mongo/adapters';
 
 export const createClient = (db: Db) => {
   return new Client(db, valibotAdapterFactory);
@@ -272,7 +272,7 @@ const users = client.model('users', userSchema);
 ## パッケージ構成
 
 ```
-mongo-standard-schema/
+safe-mongo/
 ├── dist/
 │   ├── index.js
 │   ├── index.d.ts

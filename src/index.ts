@@ -1,4 +1,4 @@
-// Main entry point for mongo-standard-schema
+// Main entry point for safe-mongo
 export { Client } from './client/index.js';
 export type { Adapter, InferInput, InferOutput } from './adapters/index.js';
 export {

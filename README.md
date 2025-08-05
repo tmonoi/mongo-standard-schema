@@ -1,4 +1,4 @@
-# mongo-standard-schema
+# safe-mongo
 
 Type-safe MongoDB client library with support for multiple validation libraries.
 
@@ -14,7 +14,7 @@ Type-safe MongoDB client library with support for multiple validation libraries.
 ## Installation
 
 ```bash
-npm install mongo-standard-schema mongodb
+npm install safe-mongo mongodb
 
 # Install the validation library of your choice
 npm install zod
@@ -28,7 +28,7 @@ npm install valibot
 
 ```typescript
 import { MongoClient } from 'mongodb';
-import { Client, zodAdapterFactory } from 'mongo-standard-schema';
+import { Client, zodAdapterFactory } from 'safe-mongo';
 import { z } from 'zod';
 
 // Connect to MongoDB
@@ -75,7 +75,7 @@ await User.deleteOne({ _id: user._id });
 
 ```typescript
 import { MongoClient } from 'mongodb';
-import { Client, valibotAdapterFactory } from 'mongo-standard-schema';
+import { Client, valibotAdapterFactory } from 'safe-mongo';
 import * as v from 'valibot';
 
 // Connect to MongoDB
@@ -276,7 +276,7 @@ This is particularly useful when:
 
 ## Type Inference
 
-One of the most powerful features of mongo-standard-schema is automatic type inference. You don't need to manually define TypeScript interfaces - they are automatically derived from your validation schemas.
+One of the most powerful features of safe-mongo is automatic type inference. You don't need to manually define TypeScript interfaces - they are automatically derived from your validation schemas.
 
 ### How It Works
 
@@ -382,7 +382,7 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 You can create custom schema adapters for other validation libraries:
 
 ```typescript
-import { SchemaAdapter, AdapterFactory } from 'mongo-standard-schema';
+import { SchemaAdapter, AdapterFactory } from 'safe-mongo';
 
 class MyCustomAdapter implements SchemaAdapter<Input, Output> {
   parse(data: unknown): Output {

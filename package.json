@@ -1,5 +1,5 @@
 {
-  "name": "mongo-standard-schema",
+  "name": "safe-mongo",
   "version": "1.0.0",
   "description": "Type-safe MongoDB client library with support for multiple validation libraries",
   "type": "module",
@@ -77,11 +77,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tmonoi/mongo-standard-schema.git"
+    "url": "git+https://github.com/tmonoi/safe-mongo.git"
   },
   "bugs": {
-    "url": "https://github.com/tmonoi/mongo-standard-schema/issues"
+    "url": "https://github.com/tmonoi/safe-mongo/issues"
   },
-  "homepage": "https://github.com/tmonoi/mongo-standard-schema#readme",
+  "homepage": "https://github.com/tmonoi/safe-mongo#readme",
   "packageManager": "pnpm@10.12.4"
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
-// import { Client } from 'mongo-standard-schema';
+// import { Client } from 'safe-mongo';
 import { Client, zodAdapter } from '../../src/index.js';
 
 describe.skip('This is a typecheck test so type check only.', () => {
