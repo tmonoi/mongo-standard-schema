@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 // import { Client } from 'mongo-standard-schema';
-import { Client } from '../../src/index.js';
+import { Client, zodAdapter } from '../../src/index.js';
 
 describe.skip('This is a typecheck test so type check only.', () => {
   let client: Client;
@@ -19,15 +19,13 @@ describe.skip('This is a typecheck test so type check only.', () => {
   });
 
   test('should provide proper TypeScript type checking', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-        email: z.string().optional(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+      email: z.string().optional(),
+    });
+    const User = client.model('users', zodAdapter(userSchema));
 
     // ✅ Valid insertOne calls - should not cause TypeScript errors
     const validUser1 = await User.insertOne({
@@ -79,7 +77,8 @@ describe.skip('This is a typecheck test so type check only.', () => {
 
     // ❌ Invalid findOne calls - should cause TypeScript errors
     // @ts-expect-error - wrong type for filter
-    await expect(User.findOne({ age: 'thirty' })).rejects.toThrow();
+    const invalidFind = await User.findOne({ age: 'thirty' });
+    expect(invalidFind).toBeNull();
 
     // @ts-expect-error - non-existent field
     // Note: MongoDB allows queries with non-existent fields, so this returns null instead of throwing

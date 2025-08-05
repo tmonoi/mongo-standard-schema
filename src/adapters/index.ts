@@ -1,3 +1,10 @@
 // Re-export all adapters
-export type { SchemaAdapter } from './base.js';
-export { ZodAdapter } from './zod.js';
+export type { Adapter, InferInput, InferOutput } from './base.js';
+export {
+  ZodSchemaAdapter,
+  zodAdapter
+} from './zod.js';
+export {
+  ValibotSchemaAdapter,
+  valibotAdapter
+} from './valibot.js';

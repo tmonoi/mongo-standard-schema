@@ -1,7 +1,5 @@
 import type { Db, MongoClient } from 'mongodb';
-import type { z } from 'zod';
-import type { InferOutput, SchemaAdapter } from '../adapters/base.js';
-import { ZodAdapter } from '../adapters/zod.js';
+import type { Adapter } from '../adapters/base.js';
 import { Model, type ModelOptions } from '../model/index.js';
 
 /**
@@ -10,35 +8,29 @@ import { Model, type ModelOptions } from '../model/index.js';
 export class Client {
   private mongoClient: MongoClient | undefined;
 
-  constructor(private db: Db, mongoClient?: MongoClient) {
+  constructor(
+    private db: Db,
+    mongoClient?: MongoClient
+  ) {
     this.mongoClient = mongoClient;
   }
 
   /**
    * Initialize client with MongoDB database connection
    */
-  static initialize(db: Db, mongoClient?: MongoClient): Client {
+  static initialize(
+    db: Db,
+    mongoClient?: MongoClient
+  ): Client {
     return new Client(db, mongoClient);
   }
 
   /**
-   * Create a model with Zod schema
+   * Create a model with schema and adapter
    */
-  model<TSchema extends z.ZodType>(
+  model<TInput, TOutput = TInput>(
     collectionName: string,
-    schema: TSchema,
-    options?: ModelOptions,
-  ): Model<z.input<TSchema>, z.output<TSchema>> {
-    const adapter = new ZodAdapter(schema);
-    return new Model(this.db, collectionName, adapter, options);
-  }
-
-  /**
-   * Create a model with custom schema adapter
-   */
-  modelWithAdapter<TInput, TOutput = TInput>(
-    collectionName: string,
-    adapter: SchemaAdapter<TInput, TOutput>,
+    adapter: Adapter<TInput, TOutput>,
     options?: ModelOptions,
   ): Model<TInput, TOutput> {
     return new Model(this.db, collectionName, adapter, options);
@@ -50,6 +42,7 @@ export class Client {
   getDb(): Db {
     return this.db;
   }
+
 
   /**
    * Close the database connection

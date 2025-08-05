@@ -1,10 +1,10 @@
 import { type z, ZodObject } from 'zod';
-import type { SchemaAdapter } from './base.js';
+import type { Adapter } from './base.js';
 
 /**
  * Zod adapter implementation
  */
-export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInput, TOutput> {
+export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInput, TOutput> {
   constructor(private schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>) {}
 
   parse(data: unknown): TOutput {
@@ -19,7 +19,7 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
     return { success: false, error: result.error };
   }
 
-  partial(): SchemaAdapter<Partial<TInput>, Partial<TOutput>> {
+  partial(): Adapter<Partial<TInput>, Partial<TOutput>> {
     // Check if the schema is a ZodObject using instanceof
     if (!(this.schema instanceof ZodObject)) {
       // If not a ZodObject, throw an error as partial() is not supported
@@ -28,12 +28,12 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
     
     const partialSchema = this.schema.partial();
     // We need to use unknown as an intermediate step for type safety
-    const adapter = new ZodAdapter(partialSchema) as unknown;
-    return adapter as SchemaAdapter<Partial<TInput>, Partial<TOutput>>;
+    const adapter = new ZodSchemaAdapter(partialSchema) as unknown;
+    return adapter as Adapter<Partial<TInput>, Partial<TOutput>>;
   }
 
-  optional(): SchemaAdapter<TInput | undefined, TOutput | undefined> {
-    return new ZodAdapter(this.schema.optional());
+  optional(): Adapter<TInput | undefined, TOutput | undefined> {
+    return new ZodSchemaAdapter(this.schema.optional());
   }
 
   getSchema(): z.ZodType<TOutput, z.ZodTypeDef, TInput> {
@@ -75,16 +75,16 @@ export class ZodAdapter<TInput, TOutput = TInput> implements SchemaAdapter<TInpu
    */
   static create<TInput, TOutput = TInput>(
     schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
-  ): ZodAdapter<TInput, TOutput> {
-    return new ZodAdapter(schema);
+  ): ZodSchemaAdapter<TInput, TOutput> {
+    return new ZodSchemaAdapter(schema);
   }
 }
 
 /**
- * Helper function to create ZodAdapter
+ * Helper function to create ZodSchemaAdapter
  */
 export function zodAdapter<TInput, TOutput = TInput>(
   schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
-): ZodAdapter<TInput, TOutput> {
-  return ZodAdapter.create(schema);
+): ZodSchemaAdapter<TInput, TOutput> {
+  return ZodSchemaAdapter.create(schema);
 }

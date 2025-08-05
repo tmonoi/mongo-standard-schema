@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { Model } from './index.js';
 import { ObjectId } from 'mongodb';
 import type { Db, Collection } from 'mongodb';
-import type { SchemaAdapter } from '../adapters/base.js';
+import type { Adapter } from '../adapters/base.js';
 
 // Define test types
 interface TestDoc {
@@ -47,7 +47,7 @@ describe('Model', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAdapter.parse.mockImplementation((data) => data);
-    model = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>);
+    model = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>);
   });
 
   describe('Model with parseOnFind option', () => {
@@ -61,7 +61,7 @@ describe('Model', () => {
     });
 
     test('should parse when parseOnFind is true', async () => {
-      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>, { parseOnFind: true });
       const doc = { _id: new ObjectId(), name: 'test' };
       mockCollection.findOne.mockResolvedValue(doc);
 
@@ -137,7 +137,7 @@ describe('Model', () => {
     });
 
     test('should find a document with parsing when parseOnFind is true', async () => {
-      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>, { parseOnFind: true });
       const filter = { name: 'test' };
       const doc = { _id: new ObjectId(), name: 'test' };
       mockCollection.findOne.mockResolvedValue(doc);
@@ -190,7 +190,7 @@ describe('Model', () => {
     });
 
     test('should find multiple documents with parsing when parseOnFind is true', async () => {
-      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>, { parseOnFind: true });
       const filter = { age: { $gt: 20 } };
       const docs = [
         { _id: new ObjectId(), name: 'test1', age: 21 },
@@ -247,7 +247,7 @@ describe('Model', () => {
     });
 
     test('should find and update a document with parsing when parseOnFind is true', async () => {
-      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>, { parseOnFind: true });
       const filter = { name: 'test' };
       const update = { $set: { name: 'updated' } };
       const doc = { _id: new ObjectId(), name: 'updated' };
@@ -299,7 +299,7 @@ describe('Model', () => {
     });
 
     test('should find and delete a document with parsing when parseOnFind is true', async () => {
-      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as SchemaAdapter<TestDoc, TestDoc>, { parseOnFind: true });
+      const modelWithParse = new Model(mockDb as unknown as Db, 'test', mockAdapter as unknown as Adapter<TestDoc, TestDoc>, { parseOnFind: true });
       const filter = { name: 'test' };
       const doc = { _id: new ObjectId(), name: 'test' };
       mockCollection.findOneAndDelete.mockResolvedValue(doc);

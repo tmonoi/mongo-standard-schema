@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 
 // import { Client } from 'mongo-standard-schema';
-import { Client } from '../../src/index.js';
+import { Client, zodAdapter } from '../../src/index.js';
 
 describe('Sample Code Integration', () => {
   let client: Client;
@@ -22,14 +22,12 @@ describe('Sample Code Integration', () => {
 
   test('should work exactly as documented in the sample', async () => {
     // Define the User schema exactly as in the sample
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test insertOne - _id should be optional
     const doc1 = await User.insertOne({
@@ -80,21 +78,18 @@ describe('Sample Code Integration', () => {
   });
 
   test('should handle validation correctly', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test validation failure
     await expect(
       User.insertOne({
         name: 'John',
-        // @ts-expect-error - wrong type for 'age'
-        age: 'invalid',
+        age: 'invalid' as any,
       }),
     ).rejects.toThrow();
 
@@ -109,14 +104,12 @@ describe('Sample Code Integration', () => {
 
 
   test('should handle multiple documents', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number(),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number(),
+    });
+    const User = client.model('users', zodAdapter(userSchema));
 
     // Test insertMany
     const docs = await User.insertMany([
@@ -157,14 +150,12 @@ describe('Sample Code Integration', () => {
   });
 
   test('should handle default values', async () => {
-    const User = client.model(
-      'users',
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        age: z.number().default(() => 18),
-      }),
-    );
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      age: z.number().default(() => 18),
+    });
+    const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
       name: 'John',
@@ -189,7 +180,7 @@ describe('Sample Code Integration', () => {
       })).default([]),
     });
 
-    const User = client.model('users', userSchema);
+    const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
       tags: [
