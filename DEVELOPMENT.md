@@ -1,10 +1,10 @@
-# mongo-standard-schema 開発ガイド
+# safe-mongo 開発ガイド
 
-このドキュメントは、mongo-standard-schemaの開発における重要な実装上の注意点と設計決定をまとめたものです。
+このドキュメントは、safe-mongoの開発における重要な実装上の注意点と設計決定をまとめたものです。
 
 ## 概要
 
-mongo-standard-schemaは、MongoDBクライアントライブラリで、複数のバリデーションライブラリ（Zod、Valibot）をサポートし、型安全性と型推論を提供します。
+safe-mongoは、MongoDBクライアントライブラリで、複数のバリデーションライブラリ（Zod、Valibot）をサポートし、型安全性と型推論を提供します。
 
 ## アーキテクチャ
 

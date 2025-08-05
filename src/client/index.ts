@@ -3,7 +3,7 @@ import type { Adapter } from '../adapters/base.js';
 import { Model, type ModelOptions } from '../model/index.js';
 
 /**
- * Main client class for mongo-standard-schema
+ * Main client class for safe-mongo
  */
 export class Client {
   private mongoClient: MongoClient | undefined;
