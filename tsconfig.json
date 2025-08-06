@@ -19,7 +19,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
     "removeComments": false,
     "importHelpers": false,
     "skipLibCheck": true,
@@ -27,13 +26,21 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
+    "composite": true,
+    "declarationDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@safe-mongo/core": ["packages/core/src"],
+      "@safe-mongo/zod": ["packages/zod/src"],
+      "@safe-mongo/valibot": ["packages/valibot/src"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/zod" },
+    { "path": "./packages/valibot" }
+  ],
+  "exclude": ["node_modules", "dist", "**/dist", "**/node_modules"],
   "ts-node": {
     "esm": true
   }

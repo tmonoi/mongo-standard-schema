@@ -1,9 +1,10 @@
 import { MongoClient } from 'mongodb';
 import * as v from 'valibot';
-import { Client, valibotAdapter } from '../src/index.js';
+import { Client, valibotAdapter } from '@safe-mongo/valibot';
 
 // Define a Valibot schema
 const UserSchema = v.object({
+  _id: v.string(),
   name: v.string(),
   age: v.pipe(v.number(), v.minValue(0), v.maxValue(150)),
   email: v.pipe(v.string(), v.email()),

@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -13,6 +14,7 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
+**/coverage/
 *.lcov
 
 # nyc test coverage
@@ -35,6 +37,7 @@ jspm_packages/
 
 # TypeScript cache
 *.tsbuildinfo
+**/*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
@@ -109,6 +112,7 @@ public
 
 # Build output
 dist/
+**/dist/
 lib/
 build/
 
@@ -143,3 +147,9 @@ test-results.xml
 
 # MongoDB Memory Server cache
 .mongodb-memory-server/
+
+# Turborepo
+.turbo/
+
+# Changesets
+.changeset/

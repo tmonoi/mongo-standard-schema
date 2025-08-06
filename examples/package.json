@@ -1,0 +1,23 @@
+{
+  "name": "@safe-mongo/examples",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "valibot-example": "tsx valibot-example.ts",
+    "type-inference": "tsx type-inference.ts"
+  },
+  "dependencies": {
+    "@safe-mongo/core": "workspace:*",
+    "@safe-mongo/zod": "workspace:*",
+    "@safe-mongo/valibot": "workspace:*",
+    "mongodb": "^6.3.0",
+    "valibot": "^1.1.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
