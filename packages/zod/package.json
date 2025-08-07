@@ -17,14 +17,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc --emitDeclarationOnly --declaration --declarationMap",
-    "dev": "tsup --watch",
+    "build": "pnpm run clean && tsup && tsc --emitDeclarationOnly --declaration",
+    "dev": "concurrently \"tsup --watch\" \"tsc --emitDeclarationOnly --declaration --watch\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
     "lint:fix": "biome check --apply .",
     "typecheck": "tsc --noEmit",
+    "clean:all": "pnpm run clean && rm -rf node_modules .turbo",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -47,8 +48,10 @@
     "@safe-mongo/core": "workspace:*"
   },
   "devDependencies": {
+    "@safe-mongo/tsconfig": "workspace:*",
     "@biomejs/biome": "^1.4.1",
     "@types/node": "^20.10.0",
+    "concurrently": "^9.1.0",
     "mongodb": "^6.3.0",
     "mongodb-memory-server": "^9.1.4",
     "tsup": "^8.0.1",

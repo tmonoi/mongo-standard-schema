@@ -1,14 +1,8 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@safe-mongo/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "declarationDir": "./dist",
-    "composite": true
+    "outDir": "./dist"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/*.spec.ts"],
-  "references": [
-    { "path": "../core" }
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -68,9 +68,15 @@ importers:
       '@biomejs/biome':
         specifier: ^1.4.1
         version: 1.9.4
+      '@safe-mongo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.9
+      concurrently:
+        specifier: ^9.1.0
+        version: 9.2.0
       mongodb:
         specifier: ^6.3.0
         version: 6.17.0(socks@2.8.6)
@@ -99,9 +105,15 @@ importers:
       '@biomejs/biome':
         specifier: ^1.4.1
         version: 1.9.4
+      '@safe-mongo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.9
+      concurrently:
+        specifier: ^9.1.0
+        version: 9.2.0
       mongodb:
         specifier: ^6.3.0
         version: 6.17.0(socks@2.8.6)
