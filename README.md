@@ -11,15 +11,24 @@ Type-safe MongoDB client library with support for multiple validation libraries.
 - 🔧 **Flexible**: Support for custom schema adapters
 - 🔌 **Pluggable**: Choose your validation library via adapter pattern
 
+## Packages
+
+This is a monorepo containing the following packages:
+
+- **@safe-mongo/core** - Core functionality and types
+- **@safe-mongo/zod** - Zod adapter for schema validation
+- **@safe-mongo/valibot** - Valibot adapter for schema validation
+
 ## Installation
 
 ```bash
-npm install safe-mongo mongodb
+# Install core package and MongoDB driver
+npm install @safe-mongo/core mongodb
 
-# Install the validation library of your choice
-npm install zod
+# Install the validation adapter of your choice
+npm install @safe-mongo/zod zod
 # or
-npm install valibot
+npm install @safe-mongo/valibot valibot
 ```
 
 ## Quick Start
@@ -28,23 +37,23 @@ npm install valibot
 
 ```typescript
 import { MongoClient } from 'mongodb';
-import { Client, zodAdapterFactory } from 'safe-mongo';
+import { Client, zodAdapter } from '@safe-mongo/zod';
 import { z } from 'zod';
 
 // Connect to MongoDB
 const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
 const dbConnection = mongoClient.db('myapp');
-const client = Client.initialize(dbConnection, zodAdapterFactory);
+const client = Client.initialize(dbConnection);
 
 // Define your schema
 const User = client.model(
   'users',
-  z.object({
+  zodAdapter(z.object({
     _id: z.string(), // _id is treated as string but converted to ObjectId internally
     name: z.string(),
     age: z.number(),
     email: z.string().email(),
-  })
+  }))
 );
 
 // Use the model
@@ -75,23 +84,23 @@ await User.deleteOne({ _id: user._id });
 
 ```typescript
 import { MongoClient } from 'mongodb';
-import { Client, valibotAdapterFactory } from 'safe-mongo';
+import { Client, valibotAdapter } from '@safe-mongo/valibot';
 import * as v from 'valibot';
 
 // Connect to MongoDB
 const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
 const dbConnection = mongoClient.db('myapp');
-const client = Client.initialize(dbConnection, valibotAdapterFactory);
+const client = Client.initialize(dbConnection);
 
 // Define your schema
 const User = client.model(
   'users',
-  v.object({
+  valibotAdapter(v.object({
     _id: v.string(),
     name: v.string(),
     age: v.pipe(v.number(), v.minValue(0)),
     email: v.pipe(v.string(), v.email()),
-  })
+  }))
 );
 
 // The rest of the API is identical!
@@ -106,31 +115,27 @@ const user = await User.insertOne({
 
 ### Client
 
-#### `Client.initialize(db: Db, adapterFactory: AdapterFactory): Client`
+#### `Client.initialize(db: Db, mongoClient?: MongoClient): Client`
 
-Initialize a new client with a MongoDB database connection and an adapter factory.
+Initialize a new client with a MongoDB database connection.
 
 ```typescript
-// For Zod
-const client = Client.initialize(db, zodAdapterFactory);
-
-// For Valibot
-const client = Client.initialize(db, valibotAdapterFactory);
+const client = Client.initialize(db);
 ```
 
-#### `client.model<TSchema>(collectionName: string, schema: TSchema, options?: ModelOptions): Model`
+#### `client.model<TInput, TOutput>(collectionName: string, adapter: Adapter<TInput, TOutput>, options?: ModelOptions): Model`
 
-Create a new model with a Zod schema.
+Create a new model with a schema adapter.
 
 **Options:**
 - `parseOnFind` (boolean, default: `false`): Whether to parse documents through the schema on find operations. When `false`, find operations return raw data from MongoDB without validation. When `true`, all documents are validated against the schema.
 
 ```typescript
 // Default behavior - no parsing on find
-const User = client.model('users', userSchema);
+const User = client.model('users', zodAdapter(userSchema));
 
 // Enable parsing on find operations
-const User = client.model('users', userSchema, { parseOnFind: true });
+const User = client.model('users', zodAdapter(userSchema), { parseOnFind: true });
 ```
 
 ### Model
@@ -235,12 +240,12 @@ Documents are validated using your schema:
 Documents are always validated during insert operations:
 
 ```typescript
-const User = client.model('users', z.object({
+const User = client.model('users', zodAdapter(z.object({
   _id: z.string(),
   name: z.string(),
   age: z.number().min(0).max(150),
   email: z.string().email(),
-}));
+})));
 
 // This will throw a validation error
 await User.insertOne({
@@ -260,7 +265,7 @@ If you need validation and default values on find operations, enable `parseOnFin
 
 ```typescript
 // Enable parsing for find operations
-const User = client.model('users', userSchema, { parseOnFind: true });
+const User = client.model('users', zodAdapter(userSchema), { parseOnFind: true });
 
 // Now find operations will:
 // - Validate retrieved documents
@@ -291,7 +296,7 @@ const userSchema = z.object({
 });
 
 // Create a model - types are automatically inferred
-const User = client.model('users', userSchema);
+const User = client.model('users', zodAdapter(userSchema));
 
 // TypeScript knows exactly what fields are required/optional
 await User.insertOne({
@@ -331,7 +336,7 @@ const postSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-const Post = client.model('posts', postSchema);
+const Post = client.model('posts', zodAdapter(postSchema));
 
 // TypeScript infers the entire nested structure
 const post = await Post.findOne({ 'author.name': 'John' });
@@ -343,22 +348,36 @@ if (post) {
 
 ## Development
 
+This is a monorepo managed with pnpm and Turborepo.
+
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
-# Build the library
-npm run build
+# Build all packages
+pnpm run build
 
 # Run tests
-npm test
+pnpm test
 
 # Run tests with coverage
-npm run test:coverage
+pnpm run test:coverage
 
 # Lint and format
-npm run lint
-npm run format
+pnpm run lint
+pnpm run format
+```
+
+### Project Structure
+
+```
+safe-mongo/
+├── packages/
+│   ├── core/        # Core functionality
+│   ├── zod/         # Zod adapter
+│   └── valibot/     # Valibot adapter
+├── examples/        # Usage examples
+└── turbo.json       # Turborepo configuration
 ```
 
 ## Requirements
@@ -382,9 +401,9 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 You can create custom schema adapters for other validation libraries:
 
 ```typescript
-import { SchemaAdapter, AdapterFactory } from 'safe-mongo';
+import { type Adapter } from '@safe-mongo/core';
 
-class MyCustomAdapter implements SchemaAdapter<Input, Output> {
+class MyCustomAdapter<Input, Output> implements Adapter<Input, Output> {
   parse(data: unknown): Output {
     // Implement validation
   }
@@ -406,14 +425,11 @@ class MyCustomAdapter implements SchemaAdapter<Input, Output> {
   }
 }
 
-const myAdapterFactory: AdapterFactory = {
-  name: 'custom',
-  create(schema) {
-    return new MyCustomAdapter(schema);
-  }
-};
+const myAdapter = <Input, Output>(schema: MySchema) => 
+  new MyCustomAdapter<Input, Output>(schema);
 
-const client = Client.initialize(db, myAdapterFactory);
+const client = Client.initialize(db);
+const User = client.model('users', myAdapter(userSchema));
 ```
 
 ### Using Multiple Adapters
@@ -421,15 +437,18 @@ const client = Client.initialize(db, myAdapterFactory);
 You can use different validation libraries for different collections:
 
 ```typescript
+import { Client as ZodClient, zodAdapter } from '@safe-mongo/zod';
+import { Client as ValibotClient, valibotAdapter } from '@safe-mongo/valibot';
+
 // Create separate clients for different adapters
-const zodClient = Client.initialize(db, zodAdapterFactory);
-const valibotClient = Client.initialize(db, valibotAdapterFactory);
+const zodClient = ZodClient.initialize(db);
+const valibotClient = ValibotClient.initialize(db);
 
 // Use Zod for users
-const User = zodClient.model('users', userZodSchema);
+const User = zodClient.model('users', zodAdapter(userZodSchema));
 
 // Use Valibot for products
-const Product = valibotClient.model('products', productValibotSchema);
+const Product = valibotClient.model('products', valibotAdapter(productValibotSchema));
 ```
 
 ## Roadmap

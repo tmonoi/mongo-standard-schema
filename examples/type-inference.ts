@@ -1,4 +1,5 @@
-import { Client, zodAdapterFactory, valibotAdapterFactory } from '../src/index.js';
+import { Client, zodAdapter } from '@safe-mongo/zod';
+import { Client as ValibotClient, valibotAdapter } from '@safe-mongo/valibot';
 import { z } from 'zod';
 import * as v from 'valibot';
 import type { Db } from 'mongodb';
@@ -11,7 +12,7 @@ declare const db: Db;
 // ============================================
 
 // Initialize client with Zod adapter
-const zodClient = Client.initialize(db, zodAdapterFactory);
+const zodClient = Client.initialize(db);
 
 // Define a Zod schema
 const userZodSchema = z.object({
@@ -23,7 +24,7 @@ const userZodSchema = z.object({
 });
 
 // Create a model - types are automatically inferred
-const UserZod = zodClient.model('users', userZodSchema);
+const UserZod = zodClient.model('users', zodAdapter(userZodSchema));
 
 // TypeScript knows the exact shape of the documents
 async function zodExample() {
@@ -59,7 +60,7 @@ async function zodExample() {
 // ============================================
 
 // Initialize client with Valibot adapter
-const valibotClient = Client.initialize(db, valibotAdapterFactory);
+const valibotClient = ValibotClient.initialize(db);
 
 // Define a Valibot schema
 const userValibotSchema = v.object({
@@ -71,7 +72,7 @@ const userValibotSchema = v.object({
 });
 
 // Create a model - types are automatically inferred
-const UserValibot = valibotClient.model('users', userValibotSchema);
+const UserValibot = valibotClient.model('users', valibotAdapter(userValibotSchema));
 
 // TypeScript knows the exact shape of the documents
 async function valibotExample() {
@@ -119,7 +120,7 @@ const postSchema = z.object({
   publishedAt: z.date().optional(),
 });
 
-const Post = zodClient.model('posts', postSchema);
+const Post = zodClient.model('posts', zodAdapter(postSchema));
 
 async function advancedExample() {
   // TypeScript infers the entire nested structure
