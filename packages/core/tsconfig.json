@@ -19,7 +19,8 @@
     "noEmitOnError": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "allowJs": false,
   },
   "include": ["src/**/*"],
   "exclude": [
