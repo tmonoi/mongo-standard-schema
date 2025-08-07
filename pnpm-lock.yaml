@@ -32,6 +32,9 @@ importers:
       '@biomejs/biome':
         specifier: ^1.4.1
         version: 1.9.4
+      '@safe-mongo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.9
@@ -53,6 +56,8 @@ importers:
       vitest:
         specifier: ^1.1.0
         version: 1.6.1(@types/node@20.19.9)
+
+  packages/tsconfig: {}
 
   packages/valibot:
     dependencies:
