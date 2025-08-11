@@ -1,8 +1,8 @@
 /**
- * Base interface for adapters
+ * Minimal interface for adapters
  * This allows support for multiple validation libraries (zod, valibot, arktype, etc.)
  */
-export interface Adapter<TInput, TOutput = TInput> {
+export interface MinimalAdapter<TInput, TOutput = TInput> {
   /**
    * Parse data and throw on validation failure
    */
@@ -24,9 +24,9 @@ export interface Adapter<TInput, TOutput = TInput> {
 /**
  * Type helper to extract input type from adapter
  */
-export type InferInput<T> = T extends Adapter<infer U, unknown> ? U : never;
+export type InferInput<T> = T extends MinimalAdapter<infer U, unknown> ? U : never;
 
 /**
  * Type helper to extract output type from adapter
  */
-export type InferOutput<T> = T extends Adapter<unknown, infer U> ? U : never;
+export type InferOutput<T> = T extends MinimalAdapter<unknown, infer U> ? U : never;

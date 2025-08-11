@@ -35,10 +35,6 @@ const mockDb = {
 
 const mockAdapter = {
   parse: vi.fn((data) => data),
-  safeParse: vi.fn(),
-  partial: vi.fn(),
-  optional: vi.fn(),
-  getSchema: vi.fn(),
   getIdFieldType: vi.fn().mockReturnValue('string'),
 };
 

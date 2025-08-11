@@ -466,22 +466,6 @@ class MyCustomAdapter<Input, Output> implements Adapter<Input, Output> {
   parse(data: unknown): Output {
     // Implement validation
   }
-  
-  safeParse(data: unknown) {
-    // Implement safe validation
-  }
-  
-  partial() {
-    // Implement partial schema
-  }
-  
-  optional() {
-    // Implement optional schema
-  }
-  
-  getSchema() {
-    // Return the original schema
-  }
 }
 
 const myAdapter = <Input, Output>(schema: MySchema) => 

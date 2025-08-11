@@ -13,35 +13,6 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     return this.schema.parse(data);
   }
 
-  safeParse(data: unknown): { success: true; data: TOutput } | { success: false; error: unknown } {
-    const result = this.schema.safeParse(data);
-    if (result.success) {
-      return { success: true, data: result.data };
-    }
-    return { success: false, error: result.error };
-  }
-
-  partial(): Adapter<Partial<TInput>, Partial<TOutput>> {
-    // Check if the schema is a ZodObject using instanceof
-    if (!(this.schema instanceof ZodObject)) {
-      // If not a ZodObject, throw an error as partial() is not supported
-      throw new Error('partial() is only supported for ZodObject schemas');
-    }
-    
-    const partialSchema = this.schema.partial();
-    // We need to use unknown as an intermediate step for type safety
-    const adapter = new ZodSchemaAdapter(partialSchema) as unknown;
-    return adapter as Adapter<Partial<TInput>, Partial<TOutput>>;
-  }
-
-  optional(): Adapter<TInput | undefined, TOutput | undefined> {
-    return new ZodSchemaAdapter(this.schema.optional());
-  }
-
-  getSchema(): z.ZodType<TOutput, z.ZodTypeDef, TInput> {
-    return this.schema;
-  }
-
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
     // Check if the schema is a ZodObject using instanceof
     if (!(this.schema instanceof ZodObject)) {
