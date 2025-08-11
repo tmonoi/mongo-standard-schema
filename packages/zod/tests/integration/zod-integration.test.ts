@@ -29,8 +29,9 @@ describe('Sample Code Integration', () => {
     });
     const User = client.model('users', zodAdapter(userSchema));
 
-    // Test insertOne - _id should be optional
+    // Test insertOne - _id is required for string schema
     const doc1 = await User.insertOne({
+      _id: 'user1',
       name: 'John',
       age: 20,
     });
@@ -88,6 +89,7 @@ describe('Sample Code Integration', () => {
     // Test validation failure
     await expect(
       User.insertOne({
+        _id: 'user-invalid',
         name: 'John',
         age: 'invalid' as any,
       }),
@@ -95,6 +97,7 @@ describe('Sample Code Integration', () => {
 
     // Test successful validation
     const validDoc = await User.insertOne({
+      _id: 'user2',
       name: 'Jane',
       age: 25,
     });
@@ -113,9 +116,9 @@ describe('Sample Code Integration', () => {
 
     // Test insertMany
     const docs = await User.insertMany([
-      { name: 'Alice', age: 30 },
-      { name: 'Bob', age: 25 },
-      { name: 'Charlie', age: 35 },
+      { _id: 'user3', name: 'Alice', age: 30 },
+      { _id: 'user4', name: 'Bob', age: 25 },
+      { _id: 'user5', name: 'Charlie', age: 35 },
     ]);
 
     expect(docs).toHaveLength(3);
@@ -158,6 +161,7 @@ describe('Sample Code Integration', () => {
     const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
+      _id: 'user6',
       name: 'John',
     });
     expect(doc.age).toBe(18);
@@ -183,6 +187,7 @@ describe('Sample Code Integration', () => {
     const User = client.model('users', zodAdapter(userSchema));
 
     const doc = await User.insertOne({
+      _id: 'user7',
       tags: [
         { name: 'tag1' },
         { name: 'tag2', color: 'green' },

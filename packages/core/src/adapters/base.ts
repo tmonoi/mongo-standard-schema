@@ -33,6 +33,12 @@ export interface Adapter<TInput, TOutput = TInput> {
    * This is used for MongoDB update operations like $set
    */
   parseUpdateFields?(fields: Record<string, unknown>): Record<string, unknown>;
+
+  /**
+   * Get the type of the _id field in the schema
+   * Returns 'string' for string _id, 'ObjectId' for ObjectId _id, or 'none' if no _id field
+   */
+  getIdFieldType?(): 'string' | 'ObjectId' | 'none';
 }
 
 /**

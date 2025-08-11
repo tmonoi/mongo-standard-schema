@@ -39,6 +39,7 @@ const mockAdapter = {
   partial: vi.fn(),
   optional: vi.fn(),
   getSchema: vi.fn(),
+  getIdFieldType: vi.fn().mockReturnValue('string'),
 };
 
 describe('Model', () => {
@@ -72,16 +73,16 @@ describe('Model', () => {
   });
 
   describe('insertOne', () => {
-    test('should insert a document without a provided _id', async () => {
-      const doc = { name: 'test' };
+    test('should insert a document with a provided _id', async () => {
+      const doc = { _id: new ObjectId().toString(), name: 'test' };
       const insertedId = new ObjectId();
       mockCollection.insertOne.mockResolvedValue({ insertedId });
 
       const result = await model.insertOne(doc);
 
-      expect(mockCollection.insertOne).toHaveBeenCalledWith(doc, undefined);
-      expect(mockAdapter.parse).toHaveBeenCalledWith({ ...doc, _id: insertedId.toString() });
-      expect(result).toEqual({ ...doc, _id: insertedId.toString() });
+      expect(mockCollection.insertOne).toHaveBeenCalled();
+      expect(mockAdapter.parse).toHaveBeenCalledWith(doc);
+      expect(result).toEqual(doc);
     });
 
     test('should insert a document with a provided _id', async () => {
@@ -90,14 +91,13 @@ describe('Model', () => {
 
       const result = await model.insertOne(doc);
 
-      const mongoDoc = { ...doc, _id: new ObjectId(doc._id) };
       expect(mockAdapter.parse).toHaveBeenCalledWith(doc);
-      expect(mockCollection.insertOne).toHaveBeenCalledWith(mongoDoc, undefined);
+      expect(mockCollection.insertOne).toHaveBeenCalledWith(doc, undefined);
       expect(result).toEqual(doc);
     });
 
     test('should throw if adapter parsing fails', async () => {
-      const doc = { name: 'test' };
+      const doc = { _id: new ObjectId().toString(), name: 'test' };
       const error = new Error('Validation failed');
       mockAdapter.parse.mockImplementation(() => {
         throw error;
@@ -110,7 +110,10 @@ describe('Model', () => {
 
   describe('insertMany', () => {
     test('should insert multiple documents', async () => {
-      const docs = [{ name: 'test1' }, { name: 'test2' }];
+      const docs = [
+        { _id: new ObjectId().toString(), name: 'test1' },
+        { _id: new ObjectId().toString(), name: 'test2' }
+      ];
       const insertedIds = { '0': new ObjectId(), '1': new ObjectId() };
       mockCollection.insertMany.mockResolvedValue({ insertedIds });
 
@@ -120,6 +123,7 @@ describe('Model', () => {
       expect(mockAdapter.parse).toHaveBeenCalledTimes(2);
       expect(result).toHaveLength(2);
       expect(result[0]?.name).toBe('test1');
+      expect(result[1]?.name).toBe('test2');
     });
   });
 

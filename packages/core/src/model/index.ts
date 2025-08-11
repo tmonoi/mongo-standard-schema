@@ -54,6 +54,7 @@ export interface ModelOptions {
 export class Model<TInput, TOutput> {
   private collection: Collection;
   private options: ModelOptions;
+  private idFieldType: 'string' | 'ObjectId' | 'none';
 
   constructor(
     private db: Db,
@@ -66,6 +67,15 @@ export class Model<TInput, TOutput> {
       parseOnFind: false,
       ...options,
     };
+    // Get _id field type from adapter
+    this.idFieldType = this.adapter.getIdFieldType?.() || 'string';
+  }
+
+  /**
+   * Check if the schema expects string _id
+   */
+  private isStringIdSchema(): boolean {
+    return this.idFieldType === 'string';
   }
 
   /**
@@ -82,9 +92,13 @@ export class Model<TInput, TOutput> {
     }
 
     const processedFields = this.adapter.parseUpdateFields(update.$set);
+    
+    // Convert _id fields in $set for MongoDB if needed
+    const convertedFields = convertIdForMongo(processedFields, this.isStringIdSchema());
+    
     return {
       ...update,
-      $set: processedFields as PaprMatchKeysAndValues<WithId<TInput>>,
+      $set: convertedFields as PaprMatchKeysAndValues<WithId<TInput>>,
     };
   }
 
@@ -95,39 +109,38 @@ export class Model<TInput, TOutput> {
     doc: StrictOptionalId<TInput>,
     options?: InsertOneOptions
   ): Promise<WithId<TOutput>> {
-    // If _id is provided, validate with it; otherwise, let MongoDB generate it
-    if (doc._id) {
-      // User provided _id, validate the full document
-      const docWithId = doc as WithId<TInput>;
-      const validatedDoc = this.adapter.parse(docWithId);
-      const mongoDoc = convertIdForMongo(validatedDoc);
+    // Validate the document
+    const validatedDoc = this.adapter.parse(doc as TInput);
+    
+    // Check if _id was provided
+    const docAsAny = doc as any;
+    const hasProvidedId = docAsAny._id !== undefined;
+    
+    // Convert for MongoDB
+    const mongoDoc = convertIdForMongo(validatedDoc, this.isStringIdSchema());
 
-      const result = await this.collection.insertOne(
-        mongoDoc as Document,
-        options
-      );
-
-      return {
-        ...validatedDoc,
-        _id: result.insertedId.toString(),
-      } as WithId<TOutput>;
-    }
-
-    // No _id provided, let MongoDB generate it
     const result = await this.collection.insertOne(
-      doc as Record<string, unknown>,
+      mongoDoc as Document,
       options
     );
 
-    // Now validate with the generated _id
-    const docWithGeneratedId = {
-      ...doc,
-      _id: result.insertedId.toString(),
-    } as WithId<TInput>;
+    // If _id was provided, return the validated document as is
+    if (hasProvidedId) {
+      return validatedDoc as WithId<TOutput>;
+    }
 
-    const validatedDoc = this.adapter.parse(docWithGeneratedId);
+    // If _id was not provided, add the generated _id
+    const insertedDoc = {
+      ...validatedDoc,
+      _id: result.insertedId,
+    } as WithId<TOutput>;
 
-    return validatedDoc as WithId<TOutput>;
+    // For ObjectId schemas, ensure the _id is an ObjectId instance
+    if (!this.isStringIdSchema() && typeof insertedDoc._id === 'string') {
+      (insertedDoc as any)._id = new ObjectId(insertedDoc._id);
+    }
+    
+    return insertedDoc;
   }
 
   /**
@@ -137,16 +150,11 @@ export class Model<TInput, TOutput> {
     docs: StrictOptionalId<TInput>[],
     options?: BulkWriteOptions
   ): Promise<WithId<TOutput>[]> {
-    // Generate _ids and validate documents
-    const docsWithIds = docs.map((doc) => ({
-      ...doc,
-      _id: doc._id || new ObjectId().toString(),
-    })) as WithId<TInput>[];
-
-    const validatedDocs = docsWithIds.map((doc) => this.adapter.parse(doc));
+    // Validate documents
+    const validatedDocs = docs.map((doc) => this.adapter.parse(doc as TInput));
 
     // Convert for MongoDB
-    const mongoDocs = validatedDocs.map((doc) => convertIdForMongo(doc));
+    const mongoDocs = validatedDocs.map((doc) => convertIdForMongo(doc, this.isStringIdSchema()));
 
     // Insert into MongoDB
     const result = await this.collection.insertMany(
@@ -154,13 +162,22 @@ export class Model<TInput, TOutput> {
       options
     );
 
-    // Return the inserted documents with string _ids
-    return validatedDocs.map((doc, index) => ({
-      ...doc,
-      _id:
-        Object.values(result.insertedIds)[index]?.toString() ||
-        (doc as WithId<TOutput>)._id,
-    })) as WithId<TOutput>[];
+    // Map inserted IDs to documents
+    const docsWithIds = validatedDocs.map((doc, index) => {
+      const docAsAny = doc as any;
+      if (!docAsAny._id) {
+        // MongoDB generated the _id
+        const insertedId = result.insertedIds[index];
+        const docWithId = {
+          ...doc,
+          _id: insertedId,
+        } as WithId<TInput>;
+        return convertIdFromMongo(docWithId, this.isStringIdSchema());
+      }
+      return doc;
+    });
+
+    return docsWithIds as WithId<TOutput>[];
   }
 
   /**
@@ -170,7 +187,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput>,
     options?: FindOptions
   ): Promise<WithId<TOutput> | null> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     const result = await this.collection.findOne(
       mongoFilter as Filter<Document>,
       options
@@ -180,53 +197,60 @@ export class Model<TInput, TOutput> {
       return null;
     }
 
-    // Convert _id back to string
-    const docWithStringId = convertIdFromMongo(result);
-    const filteredDoc = Object.fromEntries(
-      Object.entries(docWithStringId).filter(([, v]) => v != null)
-    );
+    // Convert _id based on schema type
+    const docWithConvertedId = convertIdFromMongo(result, this.isStringIdSchema());
     
     // Parse only if parseOnFind is true
     if (this.options.parseOnFind) {
-      return this.adapter.parse(filteredDoc) as WithId<TOutput>;
+      return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
     }
-    return filteredDoc as WithId<TOutput>;
+    return docWithConvertedId as WithId<TOutput>;
   }
 
   /**
    * Find a document by _id
    */
   async findById(
-    id: string,
+    id: string | ObjectId,
     options?: FindOptions
   ): Promise<WithId<TOutput> | null> {
-    // Try both string and ObjectId formats to handle different storage scenarios
-    const stringResult = await this.collection.findOne(
-      { _id: id } as Document,
-      options
-    );
-    if (stringResult) {
-      const docWithStringId = convertIdFromMongo(stringResult);
-      if (this.options.parseOnFind) {
-        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
-      }
-      return docWithStringId as unknown as WithId<TOutput>;
+    let result: Document | null;
+    
+    if (this.idFieldType === 'string') {
+      // For string schemas, convert ObjectId to string if needed
+      const stringId = typeof id === 'string' ? id : id.toString();
+      result = await this.collection.findOne(
+        { _id: stringId } as Document,
+        options
+      );
+    } else {
+      // For ObjectId schemas, convert string to ObjectId if needed
+      const objectId = typeof id === 'string' ? stringToObjectId(id) : id;
+      result = await this.collection.findOne(
+        { _id: objectId },
+        options
+      );
     }
 
-    // If not found as string, try as ObjectId
-    const objectIdResult = await this.collection.findOne(
-      { _id: stringToObjectId(id) },
-      options
-    );
-    if (objectIdResult) {
-      const docWithStringId = convertIdFromMongo(objectIdResult);
-      if (this.options.parseOnFind) {
-        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
-      }
-      return docWithStringId as unknown as WithId<TOutput>;
+    if (!result) {
+      return null;
     }
 
-    return null;
+    // For ObjectId schemas, ensure _id remains as ObjectId
+    if (!this.isStringIdSchema() && result._id) {
+      // MongoDB returns ObjectId instances, so we should preserve them
+      const docWithConvertedId = convertIdFromMongo(result, this.isStringIdSchema());
+      if (this.options.parseOnFind) {
+        return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
+      }
+      return docWithConvertedId as WithId<TOutput>;
+    }
+
+    const docWithConvertedId = convertIdFromMongo(result, this.isStringIdSchema());
+    if (this.options.parseOnFind) {
+      return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
+    }
+    return docWithConvertedId as WithId<TOutput>;
   }
 
   /**
@@ -236,7 +260,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput>,
     options?: FindOptions
   ): Promise<WithId<TOutput>[]> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     const cursor = this.collection.find(
       mongoFilter as Filter<Document>,
       options
@@ -244,11 +268,11 @@ export class Model<TInput, TOutput> {
     const results = await cursor.toArray();
 
     return results.map((doc: Record<string, unknown>) => {
-      const docWithStringId = convertIdFromMongo(doc);
+      const docWithConvertedId = convertIdFromMongo(doc, this.isStringIdSchema());
       if (this.options.parseOnFind) {
-        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+        return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
       }
-      return docWithStringId as unknown as WithId<TOutput>;
+      return docWithConvertedId as unknown as WithId<TOutput>;
     });
   }
 
@@ -256,7 +280,7 @@ export class Model<TInput, TOutput> {
    * Get a cursor for finding documents
    */
   findCursor(filter: PaprFilter<TInput>, options?: FindOptions): FindCursor {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.find(mongoFilter as Filter<Document>, options);
   }
 
@@ -271,26 +295,7 @@ export class Model<TInput, TOutput> {
     // Process update to apply defaults and validation
     const processedUpdate = this.processUpdateOperation(update);
 
-    // Handle _id field specially to support both string and ObjectId formats
-    if ("_id" in filter && typeof filter._id === "string") {
-      // Try string format first
-      let result = await this.collection.updateOne(
-        { _id: filter._id },
-        processedUpdate as UpdateFilter<Document>,
-        options
-      );
-      if (result.matchedCount === 0) {
-        // If no match, try ObjectId format
-        result = await this.collection.updateOne(
-          { _id: stringToObjectId(filter._id) },
-          processedUpdate as UpdateFilter<Document>,
-          options
-        );
-      }
-      return result;
-    }
-
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.updateOne(
       mongoFilter as Filter<Document>,
       processedUpdate as UpdateFilter<Document>,
@@ -309,7 +314,7 @@ export class Model<TInput, TOutput> {
     // Process update to apply defaults and validation
     const processedUpdate = this.processUpdateOperation(update);
 
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.updateMany(
       mongoFilter as Filter<Document>,
       processedUpdate as UpdateFilter<Document>,
@@ -328,41 +333,7 @@ export class Model<TInput, TOutput> {
     // Process update to apply defaults and validation
     const processedUpdate = this.processUpdateOperation(update);
 
-    // Handle _id field specially to support both string and ObjectId formats
-    if ("_id" in filter && typeof filter._id === "string") {
-      // Try string format first
-      let result = await this.collection.findOneAndUpdate(
-        { _id: filter._id },
-        processedUpdate as UpdateFilter<Document>,
-        {
-          returnDocument: "after",
-          ...options,
-        }
-      );
-      if (!result) {
-        // If no match, try ObjectId format
-        result = await this.collection.findOneAndUpdate(
-          { _id: stringToObjectId(filter._id) },
-          processedUpdate as UpdateFilter<Document>,
-          {
-            returnDocument: "after",
-            ...options,
-          }
-        );
-      }
-
-      if (!result) {
-        return null;
-      }
-
-      const docWithStringId = convertIdFromMongo(result);
-      if (this.options.parseOnFind) {
-        return this.adapter.parse(docWithStringId) as WithId<TOutput>;
-      }
-      return docWithStringId as unknown as WithId<TOutput>;
-    }
-
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     const result = await this.collection.findOneAndUpdate(
       mongoFilter as Filter<Document>,
       processedUpdate as UpdateFilter<Document>,
@@ -376,11 +347,11 @@ export class Model<TInput, TOutput> {
       return null;
     }
 
-    const docWithStringId = convertIdFromMongo(result);
+    const docWithConvertedId = convertIdFromMongo(result, this.isStringIdSchema());
     if (this.options.parseOnFind) {
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
     }
-    return docWithStringId as unknown as WithId<TOutput>;
+    return docWithConvertedId as unknown as WithId<TOutput>;
   }
 
   /**
@@ -390,24 +361,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    // Handle _id field specially to support both string and ObjectId formats
-    if ("_id" in filter && typeof filter._id === "string") {
-      // Try string format first
-      let result = await this.collection.deleteOne(
-        { _id: filter._id },
-        options
-      );
-      if (result.deletedCount === 0) {
-        // If no match, try ObjectId format
-        result = await this.collection.deleteOne(
-          { _id: stringToObjectId(filter._id) },
-          options
-        );
-      }
-      return result;
-    }
-
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.deleteOne(mongoFilter as Filter<Document>, options);
   }
 
@@ -418,7 +372,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.deleteMany(mongoFilter as Filter<Document>, options);
   }
 
@@ -429,7 +383,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput>,
     options?: FindOneAndDeleteOptions
   ): Promise<WithId<TOutput> | null> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     const result = await this.collection.findOneAndDelete(
       mongoFilter as Filter<Document>,
       options || {}
@@ -439,11 +393,11 @@ export class Model<TInput, TOutput> {
       return null;
     }
 
-    const docWithStringId = convertIdFromMongo(result);
+    const docWithConvertedId = convertIdFromMongo(result, this.isStringIdSchema());
     if (this.options.parseOnFind) {
-      return this.adapter.parse(docWithStringId) as WithId<TOutput>;
+      return this.adapter.parse(docWithConvertedId) as WithId<TOutput>;
     }
-    return docWithStringId as unknown as WithId<TOutput>;
+    return docWithConvertedId as unknown as WithId<TOutput>;
   }
 
   /**
@@ -453,7 +407,7 @@ export class Model<TInput, TOutput> {
     filter: PaprFilter<TInput> = {},
     options?: CountDocumentsOptions
   ): Promise<number> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.countDocuments(
       mongoFilter as Filter<Document>,
       options
@@ -475,7 +429,7 @@ export class Model<TInput, TOutput> {
     key: K,
     filter: PaprFilter<TInput> = {}
   ): Promise<WithId<TInput>[K][]> {
-    const mongoFilter = convertFilterForMongo(filter);
+    const mongoFilter = convertFilterForMongo(filter, this.isStringIdSchema());
     return this.collection.distinct(
       key as string,
       mongoFilter as Filter<Document>

@@ -29,6 +29,7 @@ describe.skip('This is a typecheck test so type check only.', () => {
 
     // ✅ Valid insertOne calls - should not cause TypeScript errors
     const validUser1 = await User.insertOne({
+      _id: 'user1',
       name: 'John',
       age: 30,
     });
@@ -37,6 +38,7 @@ describe.skip('This is a typecheck test so type check only.', () => {
     expect(typeof validUser1._id).toBe('string');
 
     const validUser2 = await User.insertOne({
+      _id: 'user2',
       name: 'Jane',
       age: 25,
       email: 'jane@example.com',

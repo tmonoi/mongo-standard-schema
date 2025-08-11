@@ -2,23 +2,45 @@ import type { ObjectId } from 'mongodb';
 
 /**
  * Adds _id field to a schema type
+ * If the schema already has an _id field, it preserves the original type
+ * Otherwise, it adds _id: string
  */
-export type WithId<TSchema> = TSchema & { _id: string };
+export type WithId<TSchema> = TSchema extends { _id: any }
+  ? TSchema
+  : TSchema & { _id: string };
 
 /**
  * Makes _id field optional for insert operations
- * Ensures all other required fields are present
+ * Preserves the original _id type if present
+ * Note: This type is deprecated in favor of StrictOptionalId
  */
-export type OptionalId<TSchema> = TSchema extends { _id: any }
-  ? Omit<TSchema, '_id'> & { _id?: string }
+export type OptionalId<TSchema> = TSchema extends { _id: infer IdType }
+  ? Omit<TSchema, '_id'> & { _id?: IdType }
   : TSchema & { _id?: string };
 
 /**
  * Strict version that requires all non-_id fields to be present
+ * _id is optional only for ObjectId type, required for string type
  */
-export type StrictOptionalId<TSchema> = TSchema extends { _id: any }
-  ? Omit<TSchema, '_id'> & { _id?: string }
+export type StrictOptionalId<TSchema> = TSchema extends { _id: ObjectId }
+  ? Omit<TSchema, '_id'> & { _id?: ObjectId }
+  : TSchema extends { _id: string }
+  ? TSchema // string _id is required
   : TSchema & { _id?: string };
+
+/**
+ * Extract the _id type from a schema
+ */
+export type ExtractIdType<TSchema> = TSchema extends { _id: infer IdType }
+  ? IdType
+  : string;
+
+/**
+ * Check if a schema has ObjectId as _id type
+ */
+export type HasObjectId<TSchema> = TSchema extends { _id: ObjectId }
+  ? true
+  : false;
 
 /**
  * Numeric types for MongoDB operations

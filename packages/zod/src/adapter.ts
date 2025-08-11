@@ -1,5 +1,7 @@
-import { type z, ZodObject } from 'zod';
+import { type z, ZodObject, ZodString, ZodEffects, ZodOptional } from 'zod';
 import type { Adapter } from '@safe-mongo/core';
+import { ObjectId } from 'mongodb';
+import { isObjectIdSchema } from './objectid.js';
 
 /**
  * Zod adapter implementation
@@ -68,6 +70,35 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     }
 
     return processedFields;
+  }
+
+  getIdFieldType(): 'string' | 'ObjectId' | 'none' {
+    if (!(this.schema instanceof ZodObject)) {
+      return 'none';
+    }
+    
+    const shape = this.schema.shape;
+    if (!shape._id) return 'none';
+    
+    let idSchema = shape._id;
+    
+    // Unwrap optional schema if needed
+    if (idSchema instanceof ZodOptional) {
+      idSchema = idSchema._def.innerType;
+    }
+    
+    // Check if it's a string schema
+    if (idSchema instanceof ZodString) {
+      return 'string';
+    }
+    
+    // Check if it's our custom ObjectId schema using the brand
+    if (isObjectIdSchema(idSchema)) {
+      return 'ObjectId';
+    }
+    
+    // Default to string for backward compatibility
+    return 'string';
   }
 
   /**
