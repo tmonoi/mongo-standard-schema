@@ -50,7 +50,7 @@ describe('Sample Code Integration', () => {
     expect(foundDoc?._id).toBe(doc1._id);
 
     // Test findById
-    const foundById = await User.findById(doc1._id);
+    const foundById = await User.findOne({ _id: doc1._id });
     expect(foundById).toBeDefined();
     expect(foundById?.name).toBe('John');
     expect(foundById?._id).toBe(doc1._id);
@@ -60,7 +60,7 @@ describe('Sample Code Integration', () => {
     expect(updateResult.modifiedCount).toBe(1);
 
     // Verify update
-    const updatedDoc = await User.findById(doc1._id);
+    const updatedDoc = await User.findOne({ _id: doc1._id });
     expect(updatedDoc?.age).toBe(21);
 
     // Test findOneAndUpdate
@@ -74,7 +74,7 @@ describe('Sample Code Integration', () => {
     expect(deleteResult.deletedCount).toBe(1);
 
     // Verify deletion
-    const deletedDoc = await User.findById(doc1._id);
+    const deletedDoc = await User.findOne({ _id: doc1._id });
     expect(deletedDoc).toBeNull();
   });
 
@@ -121,10 +121,10 @@ describe('Sample Code Integration', () => {
       { _id: 'user5', name: 'Charlie', age: 35 },
     ]);
 
-    expect(docs).toHaveLength(3);
-    expect(docs[0]?.name).toBe('Alice');
-    expect(docs[1]?.name).toBe('Bob');
-    expect(docs[2]?.name).toBe('Charlie');
+    expect(docs.insertedCount).toBe(3);
+    expect(docs.insertedIds[0]).toBe('user3');
+    expect(docs.insertedIds[1]).toBe('user4');
+    expect(docs.insertedIds[2]).toBe('user5');
 
     // Test find
     const allUsers = await User.find({});

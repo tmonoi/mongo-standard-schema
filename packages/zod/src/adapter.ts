@@ -8,11 +8,11 @@ import { isObjectIdSchema } from './objectid.js';
  * Only accepts ZodObject schemas to ensure extend() can be used safely
  */
 export class ZodSchemaAdapter<
-  TShape extends ZodRawShape,
-  TInput = z.input<ZodObject<TShape>>,
-  TOutput = z.output<ZodObject<TShape>>
+  TSchema extends ZodObject<any>,
+  TInput = z.input<TSchema>,
+  TOutput = z.output<TSchema>
 > implements Adapter<TInput, TOutput> {
-  constructor(private schema: ZodObject<TShape>) {}
+  constructor(private schema: TSchema) {}
 
   validate(data: unknown): Result<TOutput> {
     return this.schema['~standard']?.validate(data) as Result<TOutput>;
@@ -149,8 +149,8 @@ export class ZodSchemaAdapter<
  * Helper function to create ZodSchemaAdapter with proper type inference
  * Only accepts ZodObject schemas
  */
-export function zodAdapter<TShape extends ZodRawShape>(
-  schema: ZodObject<TShape>,
-): ZodSchemaAdapter<TShape> {
+export function zodAdapter<TSchema extends ZodObject<any>>(
+  schema: TSchema,
+): Adapter<z.input<TSchema>, z.output<TSchema>> {
   return new ZodSchemaAdapter(schema);
 }
