@@ -20,50 +20,51 @@ export type PaprMatchKeysAndValues<T> = {
  */
 export interface PaprUpdateFilter<TSchema> {
   // Field update operators
-  $set?: PaprMatchKeysAndValues<WithId<TSchema>>;
+  $set?: PaprMatchKeysAndValues<TSchema>;
+  $setOnInsert?: PaprMatchKeysAndValues<TSchema>;
   $unset?: {
-    [K in keyof FlattenObject<WithId<TSchema>>]?: '' | 1 | true;
+    [K in keyof FlattenObject<TSchema>]?: '' | 1 | true;
   };
   $inc?: {
-    [K in OnlyFieldsOfType<FlattenObject<WithId<TSchema>>, NumericType | undefined>]?: number;
+    [K in OnlyFieldsOfType<FlattenObject<TSchema>, NumericType | undefined>]?: number;
   };
   $mul?: {
-    [K in OnlyFieldsOfType<FlattenObject<WithId<TSchema>>, NumericType | undefined>]?: number;
+    [K in OnlyFieldsOfType<FlattenObject<TSchema>, NumericType | undefined>]?: number;
   };
-  $min?: PaprMatchKeysAndValues<WithId<TSchema>>;
-  $max?: PaprMatchKeysAndValues<WithId<TSchema>>;
+  $min?: PaprMatchKeysAndValues<TSchema>;
+  $max?: PaprMatchKeysAndValues<TSchema>;
   $currentDate?: {
-    [K in keyof FlattenObject<WithId<TSchema>>]?: true | { $type: 'date' | 'timestamp' };
+    [K in keyof FlattenObject<TSchema>]?: true | { $type: 'date' | 'timestamp' };
   };
   $rename?: {
-    [K in keyof FlattenObject<WithId<TSchema>>]?: string;
+    [K in keyof FlattenObject<TSchema>]?: string;
   };
 
   // Array update operators
   $addToSet?: {
-    [K in keyof WithId<TSchema>]?: WithId<TSchema>[K] extends readonly unknown[]
-      ? WithId<TSchema>[K][number] | { $each: WithId<TSchema>[K] }
+    [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
+      ? TSchema[K][number] | { $each: TSchema[K] }
       : never;
   };
   $pop?: {
-    [K in keyof WithId<TSchema>]?: WithId<TSchema>[K] extends readonly unknown[] ? 1 | -1 : never;
+    [K in keyof TSchema]?: TSchema[K] extends readonly unknown[] ? 1 | -1 : never;
   };
   $pull?: {
-    [K in keyof WithId<TSchema>]?: WithId<TSchema>[K] extends readonly unknown[]
-      ? WithId<TSchema>[K][number]
+    [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
+      ? TSchema[K][number]
       : never;
   };
   $pullAll?: {
-    [K in keyof WithId<TSchema>]?: WithId<TSchema>[K] extends readonly unknown[]
-      ? WithId<TSchema>[K]
+    [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
+      ? TSchema[K]
       : never;
   };
   $push?: {
-    [K in keyof WithId<TSchema>]?: WithId<TSchema>[K] extends readonly unknown[]
+    [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
       ?
-          | WithId<TSchema>[K][number]
+          | TSchema[K][number]
           | {
-              $each?: WithId<TSchema>[K];
+              $each?: TSchema[K];
               $position?: number;
               $slice?: number;
               $sort?: 1 | -1 | Record<string, 1 | -1>;
@@ -73,7 +74,7 @@ export interface PaprUpdateFilter<TSchema> {
 
   // Bitwise operators
   $bit?: {
-    [K in OnlyFieldsOfType<FlattenObject<WithId<TSchema>>, number | undefined>]?: {
+    [K in OnlyFieldsOfType<FlattenObject<TSchema>, number | undefined>]?: {
       and?: number;
       or?: number;
       xor?: number;

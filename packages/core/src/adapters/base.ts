@@ -1,3 +1,6 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { StrictOptionalId } from "../types/utils.js";
+
 /**
  * Base interface for adapters
  * This allows support for multiple validation libraries (zod, valibot, arktype, etc.)
@@ -6,7 +9,15 @@ export interface Adapter<TInput, TOutput = TInput> {
   /**
    * Parse data and throw on validation failure
    */
-  parse(data: unknown): TOutput;
+  validate(data: TInput): StandardSchemaV1.Result<TOutput>;
+
+  /**
+   * Validate data for insert operation
+   * '_id' field is optional if '_id' is ObjectId
+   */
+  validateForInsert(
+    data: StrictOptionalId<TInput>
+  ): StandardSchemaV1.Result<StrictOptionalId<TOutput>>;
 
   /**
    * Process update fields to apply defaults and validation
@@ -18,8 +29,10 @@ export interface Adapter<TInput, TOutput = TInput> {
    * Get the type of the _id field in the schema
    * Returns 'string' for string _id, 'ObjectId' for ObjectId _id, or 'none' if no _id field
    */
-  getIdFieldType?(): 'string' | 'ObjectId' | 'none';
+  getIdFieldType?(): "string" | "ObjectId" | "none";
 }
+
+export type Result<T> = StandardSchemaV1.Result<T>;
 
 /**
  * Type helper to extract input type from adapter

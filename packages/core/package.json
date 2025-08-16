@@ -45,8 +45,8 @@
     "mongodb": "^5.0.0 || ^6.0.0"
   },
   "devDependencies": {
-    "@safe-mongo/tsconfig": "workspace:*",
     "@biomejs/biome": "^1.4.1",
+    "@safe-mongo/tsconfig": "workspace:*",
     "@types/node": "^20.10.0",
     "concurrently": "^9.1.0",
     "mongodb": "^6.3.0",
@@ -63,5 +63,8 @@
   "bugs": {
     "url": "https://github.com/tmonoi/safe-mongo/issues"
   },
-  "homepage": "https://github.com/tmonoi/safe-mongo#readme"
+  "homepage": "https://github.com/tmonoi/safe-mongo#readme",
+  "dependencies": {
+    "@standard-schema/spec": "^1.0.0"
+  }
 }
