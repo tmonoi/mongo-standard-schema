@@ -22,26 +22,6 @@ export function isValidObjectId(id: string): boolean {
 }
 
 /**
- * Convert _id field from string to ObjectId for MongoDB operations
- * @param doc - The document to convert
- * @param isStringSchema - Whether the schema expects string _id (default: false)
- */
-export function convertIdForMongo<T>(doc: T, isStringSchema = false): T {
-  if (!doc || typeof doc !== 'object' || isStringSchema) {
-    return doc;
-  }
-
-  const docRecord = doc as Record<string, unknown>;
-  if ('_id' in docRecord && typeof docRecord._id === 'string') {
-    return {
-      ...docRecord,
-      _id: stringToObjectId(docRecord._id),
-    } as T;
-  }
-  return doc;
-}
-
-/**
  * Convert _id field from ObjectId to string for user-facing operations
  * @param doc - The document to convert
  * @param isStringSchema - Whether the schema expects string _id (default: false)

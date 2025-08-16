@@ -1,29 +1,13 @@
-import type { ObjectId } from 'mongodb';
+import type { ObjectId, OptionalId, WithId } from "mongodb";
 
-/**
- * Adds _id field to a schema type
- * If the schema already has an _id field, it preserves the original type
- * Otherwise, it adds _id: string
- */
-export type WithId<TSchema> = TSchema extends { _id: any }
-  ? TSchema
-  : TSchema & { _id: string };
-
-/**
- * Makes _id field optional for insert operations
- * Preserves the original _id type if present
- * Note: This type is deprecated in favor of StrictOptionalId
- */
-export type OptionalId<TSchema> = TSchema extends { _id: infer IdType }
-  ? Omit<TSchema, '_id'> & { _id?: IdType }
-  : TSchema & { _id?: string };
+export type { WithId };
 
 /**
  * Strict version that requires all non-_id fields to be present
  * _id is optional only for ObjectId type, required for string type
  */
 export type StrictOptionalId<TSchema> = TSchema extends { _id: ObjectId }
-  ? Omit<TSchema, '_id'> & { _id?: ObjectId }
+  ? Omit<TSchema, "_id"> & { _id?: ObjectId }
   : TSchema extends { _id: string }
   ? TSchema // string _id is required
   : TSchema & { _id?: string };
@@ -62,8 +46,8 @@ export type NestedPaths<T> = T extends object
           ? `${K}` | `${K}.${NestedPaths<T[K]>}`
           : never
         : K extends string
-          ? `${K}`
-          : never;
+        ? `${K}`
+        : never;
     }[keyof T]
   : never;
 
@@ -73,10 +57,10 @@ export type NestedPaths<T> = T extends object
 export type NestedPropertyType<T, P extends string> = P extends keyof T
   ? T[P]
   : P extends `${infer K}.${infer Rest}`
-    ? K extends keyof T
-      ? NestedPropertyType<T[K], Rest>
-      : never
-    : never;
+  ? K extends keyof T
+    ? NestedPropertyType<T[K], Rest>
+    : never
+  : never;
 
 /**
  * Flatten nested object types for dot notation
@@ -92,15 +76,24 @@ export type FlattenObject<T> = {
 export type WithMongoId<T> = T extends (infer U)[]
   ? WithMongoId<U>[]
   : T extends Date
-    ? T
-    : T extends object
-      ? {
-          [K in keyof T]: K extends '_id'
-            ? ObjectId
-            : T[K] extends (infer V)[]
-              ? WithMongoId<V>[]
-              : T[K] extends object
-                ? WithMongoId<T[K]>
-                : T[K];
-        }
-      : T;
+  ? T
+  : T extends object
+  ? {
+      [K in keyof T]: K extends "_id"
+        ? ObjectId
+        : T[K] extends (infer V)[]
+        ? WithMongoId<V>[]
+        : T[K] extends object
+        ? WithMongoId<T[K]>
+        : T[K];
+    }
+  : T;
+
+export type DocumentForInsert<TSchema> = OptionalIdIfObjectId<TSchema>;
+
+export type OptionalIdIfObjectId<TSchema> =
+TSchema extends { _id: infer I }
+  ? I extends ObjectId
+    ? Omit<TSchema, '_id'> & { _id?: I }
+    : TSchema
+  : TSchema;
