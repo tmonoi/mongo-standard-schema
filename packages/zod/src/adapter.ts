@@ -1,13 +1,18 @@
-import { z, ZodObject, ZodString, ZodEffects, ZodOptional, type ZodTypeAny } from 'zod';
+import { z, ZodObject, ZodString, ZodEffects, ZodOptional, type ZodTypeAny, type ZodRawShape } from 'zod';
 import type { Adapter, DocumentForInsert, Result, StrictOptionalId } from '@safe-mongo/core';
 import type { OptionalUnlessRequiredId } from 'mongodb';
 import { isObjectIdSchema } from './objectid.js';
 
 /**
  * Zod adapter implementation
+ * Only accepts ZodObject schemas to ensure extend() can be used safely
  */
-export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutput> {
-  constructor(private schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>) {}
+export class ZodSchemaAdapter<
+  TShape extends ZodRawShape,
+  TInput = z.input<ZodObject<TShape>>,
+  TOutput = z.output<ZodObject<TShape>>
+> implements Adapter<TInput, TOutput> {
+  constructor(private schema: ZodObject<TShape>) {}
 
   validate(data: unknown): Result<TOutput> {
     return this.schema['~standard']?.validate(data) as Result<TOutput>;
@@ -15,31 +20,28 @@ export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutpu
 
   validateForInsert(data: StrictOptionalId<TInput>): Result<StrictOptionalId<TOutput>> {
     // schemaの_idをoptionalにする
-    const schema = this.schema.extend({
-      _id: z.optional(this.schema.shape._id),
-    });
+    const shape = this.schema.shape;
     
-    const validatedData = schema.safeParse(data);
-    if (!validatedData.success) {
-      throw new Error('Validation failed');
+    // _idフィールドが存在する場合のみoptionalにする
+    if (shape._id) {
+      const insertSchema = this.schema.extend({
+        _id: z.optional(shape._id),
+      }) as ZodObject<any>;
+      
+      // Use the standard schema validation
+      return insertSchema['~standard']?.validate(data) as Result<StrictOptionalId<TOutput>>;
     }
-
-    return validatedData.data;
+    
+    // If no _id field, use the original schema
+    return this.schema['~standard']?.validate(data) as Result<StrictOptionalId<TOutput>>;
   }
 
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
-    // Check if the schema is a ZodObject using instanceof
-    if (!(this.schema instanceof ZodObject)) {
-      // If not a ZodObject, return fields as-is
-      return fields;
-    }
-
-    const schema = this.schema;
     const processedFields: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(fields)) {
       // Handle nested fields with dot notation (e.g., 'aaa.bbb')
-      const fieldSchema = this.getNestedFieldSchema(schema, key);
+      const fieldSchema = this.getNestedFieldSchema(this.schema, key);
       
       if (fieldSchema) {
         // Use safeParse for error handling
@@ -75,7 +77,7 @@ export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutpu
     for (let i = 0; i < pathParts.length; i++) {
       const part = pathParts[i];
       
-      if (!currentSchema || !currentSchema.shape) {
+      if (!part || !currentSchema || !currentSchema.shape) {
         return null;
       }
 
@@ -118,10 +120,6 @@ export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutpu
   }
 
   getIdFieldType(): 'string' | 'ObjectId' | 'none' {
-    if (!(this.schema instanceof ZodObject)) {
-      return 'none';
-    }
-    
     const shape = this.schema.shape;
     if (!shape._id) return 'none';
     
@@ -149,9 +147,10 @@ export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutpu
 
 /**
  * Helper function to create ZodSchemaAdapter with proper type inference
+ * Only accepts ZodObject schemas
  */
-export function zodAdapter<T extends ZodTypeAny>(
-  schema: T,
-): ZodSchemaAdapter<z.input<T>, z.output<T> extends z.ZodRawShape ? z.output<T> : never> {
+export function zodAdapter<TShape extends ZodRawShape>(
+  schema: ZodObject<TShape>,
+): ZodSchemaAdapter<TShape> {
   return new ZodSchemaAdapter(schema);
 }
