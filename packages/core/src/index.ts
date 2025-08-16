@@ -3,7 +3,7 @@ export { Client } from './client/index.js';
 export { Model } from './model/index.js';
 
 // Export adapter interface
-export type { Adapter, InferInput, InferOutput } from './adapters/base.js';
+export type { Adapter, InferInput, InferOutput, Result } from './adapters/base.js';
 
 // Export types
 export type {

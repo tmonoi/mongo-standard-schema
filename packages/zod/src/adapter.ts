@@ -1,16 +1,30 @@
-import { type z, ZodObject, ZodString, ZodEffects, ZodOptional } from 'zod';
-import type { Adapter } from '@safe-mongo/core';
-import { ObjectId } from 'mongodb';
+import { z, ZodObject, ZodString, ZodEffects, ZodOptional, type ZodTypeAny } from 'zod';
+import type { Adapter, DocumentForInsert, Result, StrictOptionalId } from '@safe-mongo/core';
+import type { OptionalUnlessRequiredId } from 'mongodb';
 import { isObjectIdSchema } from './objectid.js';
 
 /**
  * Zod adapter implementation
  */
-export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInput, TOutput> {
+export class ZodSchemaAdapter<TInput, TOutput> implements Adapter<TInput, TOutput> {
   constructor(private schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>) {}
 
-  parse(data: unknown): TOutput {
-    return this.schema.parse(data);
+  validate(data: unknown): Result<TOutput> {
+    return this.schema['~standard']?.validate(data) as Result<TOutput>;
+  }
+
+  validateForInsert(data: StrictOptionalId<TInput>): Result<StrictOptionalId<TOutput>> {
+    // schemaの_idをoptionalにする
+    const schema = this.schema.extend({
+      _id: z.optional(this.schema.shape._id),
+    });
+    
+    const validatedData = schema.safeParse(data);
+    if (!validatedData.success) {
+      throw new Error('Validation failed');
+    }
+
+    return validatedData.data;
   }
 
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
@@ -24,7 +38,9 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     const processedFields: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(fields)) {
-      const fieldSchema = schema.shape[key];
+      // Handle nested fields with dot notation (e.g., 'aaa.bbb')
+      const fieldSchema = this.getNestedFieldSchema(schema, key);
+      
       if (fieldSchema) {
         // Use safeParse for error handling
         const result = fieldSchema.safeParse(value);
@@ -41,6 +57,64 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     }
 
     return processedFields;
+  }
+
+  /**
+   * Get nested field schema by traversing the dot notation path
+   */
+  private getNestedFieldSchema(schema: ZodObject<any>, path: string): any {
+    // If no dot in path, it's a top-level field
+    if (!path.includes('.')) {
+      return schema.shape[path];
+    }
+
+    // Split the path and traverse the schema
+    const pathParts = path.split('.');
+    let currentSchema: any = schema;
+
+    for (let i = 0; i < pathParts.length; i++) {
+      const part = pathParts[i];
+      
+      if (!currentSchema || !currentSchema.shape) {
+        return null;
+      }
+
+      const fieldSchema = currentSchema.shape[part];
+      if (!fieldSchema) {
+        return null;
+      }
+
+      // If this is the last part of the path, return the field schema
+      if (i === pathParts.length - 1) {
+        return fieldSchema;
+      }
+
+      // Continue traversing for nested objects
+      if (fieldSchema instanceof ZodObject) {
+        currentSchema = fieldSchema;
+      } else {
+        // Handle optional schemas
+        let unwrappedSchema = fieldSchema;
+        
+        // Unwrap optional, nullable, etc.
+        while (unwrappedSchema && (
+          unwrappedSchema._def?.typeName === 'ZodOptional' ||
+          unwrappedSchema._def?.typeName === 'ZodNullable' ||
+          unwrappedSchema._def?.typeName === 'ZodDefault'
+        )) {
+          unwrappedSchema = unwrappedSchema._def.innerType;
+        }
+
+        if (unwrappedSchema instanceof ZodObject) {
+          currentSchema = unwrappedSchema;
+        } else {
+          // Can't traverse further, return null
+          return null;
+        }
+      }
+    }
+
+    return null;
   }
 
   getIdFieldType(): 'string' | 'ObjectId' | 'none' {
@@ -71,22 +145,13 @@ export class ZodSchemaAdapter<TInput, TOutput = TInput> implements Adapter<TInpu
     // Default to string for backward compatibility
     return 'string';
   }
-
-  /**
-   * Static factory method to create ZodAdapter from Zod schema
-   */
-  static create<TInput, TOutput = TInput>(
-    schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
-  ): ZodSchemaAdapter<TInput, TOutput> {
-    return new ZodSchemaAdapter(schema);
-  }
 }
 
 /**
- * Helper function to create ZodSchemaAdapter
+ * Helper function to create ZodSchemaAdapter with proper type inference
  */
-export function zodAdapter<TInput, TOutput = TInput>(
-  schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
-): ZodSchemaAdapter<TInput, TOutput> {
-  return ZodSchemaAdapter.create(schema);
+export function zodAdapter<T extends ZodTypeAny>(
+  schema: T,
+): ZodSchemaAdapter<z.input<T>, z.output<T> extends z.ZodRawShape ? z.output<T> : never> {
+  return new ZodSchemaAdapter(schema);
 }
