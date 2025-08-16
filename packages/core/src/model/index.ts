@@ -145,19 +145,18 @@ export class Model<TInput, TOutput> {
     options?: BulkWriteOptions
   ): Promise<InsertManyResult> {
     // Validate documents
-    const validatedDocs: StandardSchemaV1.Result<StrictOptionalId<TOutput>>[] =
-      [];
+    const validatedDocs: StrictOptionalId<TOutput>[] = [];
     for (const doc of docs) {
-      const validatedDoc = this.adapter.validateForInsert(doc);
-      if (validatedDoc.issues) {
-        throw new ValidationError("Validation failed", validatedDoc.issues);
+      const validatedResult = this.adapter.validateForInsert(doc);
+      if (validatedResult.issues) {
+        throw new ValidationError("Validation failed", validatedResult.issues);
       }
-      validatedDocs.push(validatedDoc);
+      validatedDocs.push(validatedResult.value);
     }
 
     // Insert into MongoDB
     return this.collection.insertMany(
-      validatedDocs,
+      validatedDocs as unknown as OptionalId<Document>[],
       options
     ) as unknown as InsertManyResult;
   }
