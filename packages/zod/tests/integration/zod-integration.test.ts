@@ -249,7 +249,7 @@ describe('Sample Code Integration', () => {
     // So we need to test this differently
     const invalidUpdate = await User.updateOne(
       { _id: doc._id },
-      { $set: { 'profile.age': 'invalid' } as any }
+      { $set: { 'profile.age': 'invalid' } }
     );
     // The update will succeed but the value will be invalid
     expect(invalidUpdate.modifiedCount).toBe(1);
@@ -264,7 +264,7 @@ describe('Sample Code Integration', () => {
     // Update nested field that doesn't exist yet
     await User.updateOne(
       { _id: doc2._id },
-      { $set: { 'address.zip': '12345' } as any }
+      { $set: { 'address.zip': '12345' } }
     );
     
     const updated2 = await User.findOne({ _id: doc2._id });

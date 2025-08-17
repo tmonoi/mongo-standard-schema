@@ -101,7 +101,7 @@ describe.skip('This is a typecheck test so type check only.', () => {
 
     await User.updateOne(
       { name: 'John' },
-      // @ts-expect-error - wrong type for 'nonExistentField'
+      // Now allows any field due to [key: string]: any
       { $set: { nonExistentField: 'value' } }
     );
 
@@ -110,5 +110,37 @@ describe.skip('This is a typecheck test so type check only.', () => {
       { age: 'thirty' },
       { $set: { name: 'Johnny' } }
     );
+  });
+
+  test('should check nested objects', async () => {
+    const userSchema = z.object({
+      _id: z.string(),
+      name: z.string(),
+      address: z.object({
+        line: z.string().default(''),
+        city: z.string().default('Tokyo'),
+        zip: z.string().optional(),
+      }).default(() => ({ line: '', city: 'Tokyo' })),
+    });
+
+    const User = client.model('users', zodAdapter(userSchema));
+
+    await User.updateOne(
+      { _id: 'user-nested-1' },
+      // valid update
+      { $set: { 'address.line': '456 Oak Ave' } }
+    );
+
+    await expect(User.updateOne(
+      { _id: 'user-nested-1' },
+      // @ts-expect-error - wrong type for 'address.line'
+      { $set: { 'address.line': 123 } }
+    )).rejects.toThrow();
+
+    await expect(User.updateOne(
+      { _id: 'user-nested-1' },
+      // @ts-expect-error - wrong field name
+      { $set: { 'address.line2': '123' } }
+    )).rejects.toThrow();
   });
 });
