@@ -1,6 +1,6 @@
 import type { Db, MongoClient } from 'mongodb';
 import type { Adapter } from '../adapters/base.js';
-import { Model, type ModelOptions } from '../model/index.js';
+import { Model } from '../model/index.js';
 
 /**
  * Main client class for safe-mongo
@@ -28,12 +28,11 @@ export class Client {
   /**
    * Create a model with schema and adapter
    */
-  model<TInput, TOutput = TInput>(
+  model<TInput, TOutput>(
     collectionName: string,
     adapter: Adapter<TInput, TOutput>,
-    options?: ModelOptions,
   ): Model<TInput, TOutput> {
-    return new Model(this.db, collectionName, adapter, options);
+    return new Model(this.db, collectionName, adapter);
   }
 
   /**

@@ -14,34 +14,6 @@ export class ValibotSchemaAdapter<TSchema extends BaseSchema<unknown, unknown, v
     return v.parse(this.schema, data);
   }
 
-  safeParse(data: unknown): { success: true; data: InferOutput<TSchema> } | { success: false; error: unknown } {
-    const result = v.safeParse(this.schema, data);
-    if (result.success) {
-      return { success: true, data: result.output };
-    }
-    return { success: false, error: result.issues };
-  }
-
-  partial(): Adapter<Partial<InferInput<TSchema>>, Partial<InferOutput<TSchema>>> {
-    // Check if schema is an object schema
-    const schemaType = (this.schema as any).type;
-    if (schemaType !== 'object') {
-      throw new Error('partial() is only supported for object schemas');
-    }
-    
-    const partialSchema = v.partial(this.schema as any);
-    return new ValibotSchemaAdapter(partialSchema as any) as any;
-  }
-
-  optional(): Adapter<InferInput<TSchema> | undefined, InferOutput<TSchema> | undefined> {
-    const optionalSchema = v.optional(this.schema);
-    return new ValibotSchemaAdapter(optionalSchema) as any;
-  }
-
-  getSchema(): TSchema {
-    return this.schema;
-  }
-
   parseUpdateFields(fields: Record<string, unknown>): Record<string, unknown> {
     // For object schemas, validate individual fields
     const schemaType = (this.schema as any).type;

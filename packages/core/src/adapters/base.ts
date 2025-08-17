@@ -1,3 +1,6 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { StrictOptionalId } from "../types/index.js";
+
 /**
  * Base interface for adapters
  * This allows support for multiple validation libraries (zod, valibot, arktype, etc.)
@@ -6,34 +9,30 @@ export interface Adapter<TInput, TOutput = TInput> {
   /**
    * Parse data and throw on validation failure
    */
-  parse(data: unknown): TOutput;
+  validate(data: TInput): StandardSchemaV1.Result<TOutput>;
 
   /**
-   * Parse data and return result object
+   * Validate data for insert operation
+   * '_id' field is optional if '_id' is ObjectId
    */
-  safeParse(data: unknown): { success: true; data: TOutput } | { success: false; error: unknown };
-
-  /**
-   * Create a partial version of the schema (all fields optional)
-   */
-  partial(): Adapter<Partial<TInput>, Partial<TOutput>>;
-
-  /**
-   * Create an optional version of the schema (schema | undefined)
-   */
-  optional(): Adapter<TInput | undefined, TOutput | undefined>;
-
-  /**
-   * Get the original schema object
-   */
-  getSchema(): unknown;
+  validateForInsert(
+    data: StrictOptionalId<TInput>
+  ): StandardSchemaV1.Result<StrictOptionalId<TOutput>>;
 
   /**
    * Process update fields to apply defaults and validation
    * This is used for MongoDB update operations like $set
    */
   parseUpdateFields?(fields: Record<string, unknown>): Record<string, unknown>;
+
+  /**
+   * Get the type of the _id field in the schema
+   * Returns 'string' for string _id, 'ObjectId' for ObjectId _id, or 'none' if no _id field
+   */
+  getIdFieldType?(): "string" | "ObjectId" | "none";
 }
+
+export type Result<T> = StandardSchemaV1.Result<T>;
 
 /**
  * Type helper to extract input type from adapter
