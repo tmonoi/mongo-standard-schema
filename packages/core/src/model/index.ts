@@ -34,16 +34,13 @@ import { ValidationError } from "../utils/error.js";
  */
 export class Model<TInput, TOutput> {
   private collection: Collection;
-  private idFieldType: "string" | "ObjectId" | "none";
 
   constructor(
-    private db: Db,
-    private collectionName: string,
+    db: Db,
+    collectionName: string,
     private adapter: Adapter<TInput, TOutput>,
   ) {
     this.collection = db.collection(collectionName);
-    // Get _id field type from adapter
-    this.idFieldType = this.adapter.getIdFieldType?.() || "string";
   }
 
   /**
