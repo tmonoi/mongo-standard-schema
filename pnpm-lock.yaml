@@ -60,6 +60,36 @@ importers:
 
   packages/tsconfig: {}
 
+  packages/typed-mongo:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^1.4.1
+        version: 1.9.4
+      '@safe-mongo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.9
+      concurrently:
+        specifier: ^9.1.0
+        version: 9.2.0
+      mongodb:
+        specifier: ^6.3.0
+        version: 6.17.0(socks@2.8.6)
+      mongodb-memory-server:
+        specifier: ^9.1.4
+        version: 9.5.0
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.0(postcss@8.5.6)(typescript@5.8.3)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.8.3
+      vitest:
+        specifier: ^1.1.0
+        version: 1.6.1(@types/node@20.19.9)
+
   packages/valibot:
     dependencies:
       '@safe-mongo/core':
