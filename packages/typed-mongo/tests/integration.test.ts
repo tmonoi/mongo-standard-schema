@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-
+import type { ObjectId, Document } from 'mongodb';
 import { Client } from '../src/index.js';
 
 describe('Sample Code Integration', () => {
@@ -18,13 +18,14 @@ describe('Sample Code Integration', () => {
   });
 
   test('should work exactly as documented in the sample', async () => {
-    // Define the User schema exactly as in the sample
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      age: z.number(),
-    });
-    const User = client.model('users', zodAdapter(userSchema));
+    // Define the User type
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      age: number;
+    }
+    
+    const User = client.model<UserSchema>('users');
 
     // Test insertOne - _id is required for string schema
     const doc1 = await User.insertOne({
@@ -34,82 +35,52 @@ describe('Sample Code Integration', () => {
     });
 
     expect(doc1).toBeDefined();
-    expect(doc1.name).toBe('John');
-    expect(doc1.age).toBe(20);
-    expect(doc1._id).toBeDefined();
-    expect(typeof doc1._id).toBe('string');
+    expect(doc1.insertedId).toBeDefined();
 
     // Test findOne
     const foundDoc = await User.findOne({ name: 'John' });
     expect(foundDoc).toBeDefined();
     expect(foundDoc?.name).toBe('John');
     expect(foundDoc?.age).toBe(20);
-    expect(foundDoc?._id).toBe(doc1._id);
+    expect(foundDoc?._id).toBe('user1');
 
     // Test findById
-    const foundById = await User.findOne({ _id: doc1._id });
+    const foundById = await User.findOne({ _id: 'user1' });
     expect(foundById).toBeDefined();
     expect(foundById?.name).toBe('John');
-    expect(foundById?._id).toBe(doc1._id);
+    expect(foundById?._id).toBe('user1');
 
     // Test updateOne
-    const updateResult = await User.updateOne({ _id: doc1._id }, { $set: { age: 21 } });
+    const updateResult = await User.updateOne({ _id: 'user1' }, { $set: { age: 21 } });
     expect(updateResult.modifiedCount).toBe(1);
 
     // Verify update
-    const updatedDoc = await User.findOne({ _id: doc1._id });
+    const updatedDoc = await User.findOne({ _id: 'user1' });
     expect(updatedDoc?.age).toBe(21);
 
     // Test findOneAndUpdate
-    const doc2 = await User.findOneAndUpdate({ _id: doc1._id }, { $set: { name: 'John Doe' } });
+    const doc2 = await User.findOneAndUpdate({ _id: 'user1' }, { $set: { name: 'John Doe' } });
     expect(doc2).toBeDefined();
     expect(doc2?.name).toBe('John Doe');
     expect(doc2?.age).toBe(21);
 
     // Test deleteOne
-    const deleteResult = await User.deleteOne({ _id: doc1._id });
+    const deleteResult = await User.deleteOne({ _id: 'user1' });
     expect(deleteResult.deletedCount).toBe(1);
 
     // Verify deletion
-    const deletedDoc = await User.findOne({ _id: doc1._id });
+    const deletedDoc = await User.findOne({ _id: 'user1' });
     expect(deletedDoc).toBeNull();
   });
 
-  test('should handle validation correctly', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      age: z.number(),
-    });
-    const User = client.model('users', zodAdapter(userSchema));
-
-    // Test validation failure
-    await expect(
-      User.insertOne({
-        _id: 'user-invalid',
-        name: 'John',
-        age: 'invalid' as any,
-      }),
-    ).rejects.toThrow();
-
-    // Test successful validation
-    const validDoc = await User.insertOne({
-      _id: 'user2',
-      name: 'Jane',
-      age: 25,
-    });
-    expect(validDoc.name).toBe('Jane');
-    expect(validDoc.age).toBe(25);
-  });
-
-
   test('should handle multiple documents', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      age: z.number(),
-    });
-    const User = client.model('users', zodAdapter(userSchema));
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      age: number;
+    }
+    
+    const User = client.model<UserSchema>('users');
 
     // Test insertMany
     const docs = await User.insertMany([
@@ -149,41 +120,51 @@ describe('Sample Code Integration', () => {
     expect(remainingUsers[0]?.name).toBe('Bob');
   });
 
-  test('should handle default values', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      age: z.number().default(() => 18),
-    });
-    const User = client.model('users', zodAdapter(userSchema));
+  test('should handle optional fields', async () => {
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      age?: number;
+      email?: string;
+    }
+    
+    const User = client.model<UserSchema>('users');
 
     const doc = await User.insertOne({
       _id: 'user6',
       name: 'John',
     });
-    expect(doc.age).toBe(18);
+    expect(doc.insertedId).toBe('user6');
+
+    const foundDoc = await User.findOne({ _id: 'user6' });
+    expect(foundDoc?.name).toBe('John');
+    expect(foundDoc?.age).toBeUndefined();
 
     // Test updateOne
-    const updateResult = await User.updateOne({ _id: doc._id }, { $set: { age: 20 } });
+    const updateResult = await User.updateOne({ _id: 'user6' }, { $set: { age: 20 } });
     expect(updateResult.modifiedCount).toBe(1);
 
     // Test findOneAndUpdate
-    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { name: "John Doe" } }, { returnDocument: 'after' });
+    const updatedDoc = await User.findOneAndUpdate(
+      { _id: 'user6' }, 
+      { $set: { name: "John Doe" } }, 
+      { returnDocument: 'after' }
+    );
     expect(updatedDoc?.age).toBe(20);
   });
 
   test('should handle nested objects', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      tags: z.array(z.object({
-        color: z.string().default('red'),
-        name: z.string(),
-      })).default([]),
-    });
+    interface UserSchema extends Document {
+      _id: string;
+      tags: Array<{
+        color?: string;
+        name: string;
+      }>;
+    }
 
-    const User = client.model('users', zodAdapter(userSchema));
+    const User = client.model<UserSchema>('users');
 
-    const doc = await User.insertOne({
+    await User.insertOne({
       _id: 'user7',
       tags: [
         { name: 'tag1' },
@@ -191,35 +172,40 @@ describe('Sample Code Integration', () => {
       ],
     });
 
-    expect(doc.tags).toHaveLength(2);
-    expect(doc.tags[0]?.color).toBe('red');
-    expect(doc.tags[1]?.color).toBe('green');
+    const foundDoc = await User.findOne({ _id: 'user7' });
+    expect(foundDoc?.tags).toHaveLength(2);
+    expect(foundDoc?.tags[0]?.color).toBeUndefined();
+    expect(foundDoc?.tags[1]?.color).toBe('green');
 
-    const updatedDoc = await User.findOneAndUpdate({ _id: doc._id }, { $set: { tags: [{ name: 'tag3' }] } }, { returnDocument: 'after' });
+    const updatedDoc = await User.findOneAndUpdate(
+      { _id: 'user7' }, 
+      { $set: { tags: [{ name: 'tag3', color: 'red' }] } }, 
+      { returnDocument: 'after' }
+    );
     expect(updatedDoc?.tags).toHaveLength(1);
     expect(updatedDoc?.tags[0]?.color).toBe('red');
     expect(updatedDoc?.tags[0]?.name).toBe('tag3');
   });
 
   test('should handle nested field updates with dot notation', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      address: z.object({
-        line: z.string().default(''),
-        city: z.string().default('Tokyo'),
-        zip: z.string().optional(),
-      }).default(() => ({ line: '', city: 'Tokyo' })),
-      profile: z.object({
-        bio: z.string().default(''),
-        age: z.number().default(0),
-      }).optional(),
-    });
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      address?: {
+        line?: string;
+        city?: string;
+        zip?: string;
+      };
+      profile?: {
+        bio?: string;
+        age?: number;
+      };
+    }
 
-    const User = client.model('users', zodAdapter(userSchema));
+    const User = client.model<UserSchema>('users');
 
     // Insert initial document
-    const doc = await User.insertOne({
+    await User.insertOne({
       _id: 'user-nested-1',
       name: 'Alice',
       address: {
@@ -228,66 +214,68 @@ describe('Sample Code Integration', () => {
       },
     });
 
-    expect(doc.address.line).toBe('123 Main St');
-    expect(doc.address.city).toBe('New York');
+    const foundDoc = await User.findOne({ _id: 'user-nested-1' });
+    expect(foundDoc?.address?.line).toBe('123 Main St');
+    expect(foundDoc?.address?.city).toBe('New York');
 
     // Test nested field update with dot notation
     const updateResult = await User.updateOne(
-      { _id: doc._id },
-      { $set: { 'address.line': '456 Oak Ave' } }
+      { _id: 'user-nested-1' },
+      { $set: { 'address.line': '456 Oak Ave' } as any }
     );
     expect(updateResult.modifiedCount).toBe(1);
 
-    const updated = await User.findOne({ _id: doc._id });
-    expect(updated?.address.line).toBe('456 Oak Ave');
-    expect(updated?.address.city).toBe('New York'); // Other fields should remain
+    const updated = await User.findOne({ _id: 'user-nested-1' });
+    expect(updated?.address?.line).toBe('456 Oak Ave');
+    expect(updated?.address?.city).toBe('New York'); // Other fields should remain
 
-    // Test validation on nested field update - MongoDB doesn't validate on update by default
-    // So we need to test this differently
+    // MongoDB doesn't validate types on update by default
+    // So invalid updates will succeed at runtime
     const invalidUpdate = await User.updateOne(
-      { _id: doc._id },
-      { $set: { 'profile.age': 'invalid' } }
+      { _id: 'user-nested-1' },
+      { $set: { 'profile.age': 'invalid' } as any }
     );
     // The update will succeed but the value will be invalid
     expect(invalidUpdate.modifiedCount).toBe(1);
 
-    // Test default values on nested field update
-    const doc2 = await User.insertOne({
+    // Test with document without nested fields
+    await User.insertOne({
       _id: 'user-nested-2',
       name: 'Bob',
     });
-    expect(doc2.address.city).toBe('Tokyo'); // Default value
+    
+    const foundDoc2 = await User.findOne({ _id: 'user-nested-2' });
+    expect(foundDoc2?.address).toBeUndefined();
 
     // Update nested field that doesn't exist yet
     await User.updateOne(
-      { _id: doc2._id },
-      { $set: { 'address.zip': '12345' } }
+      { _id: 'user-nested-2' },
+      { $set: { 'address.zip': '12345' } as any }
     );
     
-    const updated2 = await User.findOne({ _id: doc2._id });
-    expect(updated2?.address.zip).toBe('12345');
-    expect(updated2?.address.city).toBe('Tokyo'); // Default should remain
+    const updated2 = await User.findOne({ _id: 'user-nested-2' });
+    expect(updated2?.address?.zip).toBe('12345');
   });
 
   test('should handle whole object updates', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      address: z.object({
-        line: z.string().default(''),
-        city: z.string().default('Tokyo'),
-        country: z.string().default('Japan'),
-      }).default(() => ({ line: '', city: 'Tokyo', country: 'Japan' })),
-      metadata: z.object({
-        created: z.date().default(() => new Date()),
-        updated: z.date().optional(),
-      }).optional(),
-    });
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      address?: {
+        line?: string;
+        city?: string;
+        country?: string;
+      };
+      metadata?: {
+        created?: Date;
+        updated?: Date;
+      };
+    }
 
-    const User = client.model('users', zodAdapter(userSchema));
+    const User = client.model<UserSchema>('users');
 
     // Insert initial document
-    const doc = await User.insertOne({
+    await User.insertOne({
       _id: 'user-object-1',
       name: 'Charlie',
       address: {
@@ -305,52 +293,52 @@ describe('Sample Code Integration', () => {
     };
 
     const updateResult = await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-object-1' },
       { $set: { address: newAddress } }
     );
     expect(updateResult.modifiedCount).toBe(1);
 
-    const updated = await User.findOne({ _id: doc._id });
+    const updated = await User.findOne({ _id: 'user-object-1' });
     expect(updated?.address).toEqual(newAddress);
 
-    // Test validation when updating whole object - MongoDB doesn't validate on update by default
+    // MongoDB doesn't validate types on update by default
     // The update will succeed but with invalid types
     const invalidUpdate = await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-object-1' },
       { $set: { address: { line: 123 as any, city: 'Invalid' } } }
     );
     expect(invalidUpdate.modifiedCount).toBe(1);
 
-    // Test default values when updating with partial object
+    // Test with partial object
     const partialAddress = { line: '999 Market St' };
     await User.updateOne(
-      { _id: doc._id },
-      { $set: { address: partialAddress as any } }
+      { _id: 'user-object-1' },
+      { $set: { address: partialAddress } }
     );
 
-    const updated2 = await User.findOne({ _id: doc._id });
-    expect(updated2?.address.line).toBe('999 Market St');
-    expect(updated2?.address.city).toBe('Tokyo'); // Default value
-    expect(updated2?.address.country).toBe('Japan'); // Default value
+    const updated2 = await User.findOne({ _id: 'user-object-1' });
+    expect(updated2?.address?.line).toBe('999 Market St');
+    expect(updated2?.address?.city).toBeUndefined();
+    expect(updated2?.address?.country).toBeUndefined();
   });
 
   test('should handle $push operator', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      tags: z.array(z.string()).default([]),
-      scores: z.array(z.number()).default([]),
-      items: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        quantity: z.number().default(1),
-      })).default([]),
-    });
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      tags?: string[];
+      scores?: number[];
+      items?: Array<{
+        id: string;
+        name: string;
+        quantity?: number;
+      }>;
+    }
 
-    const User = client.model('users', zodAdapter(userSchema));
+    const User = client.model<UserSchema>('users');
 
     // Insert initial document
-    const doc = await User.insertOne({
+    await User.insertOne({
       _id: 'user-push-1',
       name: 'David',
       tags: ['initial'],
@@ -359,84 +347,84 @@ describe('Sample Code Integration', () => {
 
     // Test $push with single value
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-push-1' },
       { $push: { tags: 'new-tag' } as any }
     );
 
-    let updated = await User.findOne({ _id: doc._id });
+    let updated = await User.findOne({ _id: 'user-push-1' });
     expect(updated?.tags).toEqual(['initial', 'new-tag']);
 
     // Test $push with multiple values using $each
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-push-1' },
       { $push: { tags: { $each: ['tag2', 'tag3'] } } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-push-1' });
     expect(updated?.tags).toEqual(['initial', 'new-tag', 'tag2', 'tag3']);
 
     // Test $push with number array
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-push-1' },
       { $push: { scores: 200 } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-push-1' });
     expect(updated?.scores).toEqual([100, 200]);
 
     // Test $push with object
     const newItem = { id: 'item1', name: 'Item 1', quantity: 5 };
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-push-1' },
       { $push: { items: newItem } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-push-1' });
     expect(updated?.items).toHaveLength(1);
-    expect(updated?.items[0]).toEqual(newItem);
+    expect(updated?.items?.[0]).toEqual(newItem);
 
-    // Test $push with object using default values
-    // Note: MongoDB doesn't apply schema defaults on $push operations
-    const itemWithDefaults = { id: 'item2', name: 'Item 2' };
+    // Test $push with object without optional fields
+    // MongoDB doesn't apply schema defaults on $push operations
+    const itemWithoutQuantity = { id: 'item2', name: 'Item 2' };
     await User.updateOne(
-      { _id: doc._id },
-      { $push: { items: itemWithDefaults } as any }
+      { _id: 'user-push-1' },
+      { $push: { items: itemWithoutQuantity } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-push-1' });
     expect(updated?.items).toHaveLength(2);
     // MongoDB doesn't apply defaults on $push, so quantity will be undefined
-    expect(updated?.items[1]?.quantity).toBeUndefined();
+    expect(updated?.items?.[1]?.quantity).toBeUndefined();
 
-    // Test validation with $push - MongoDB doesn't validate on update
+    // MongoDB doesn't validate types on update
     // The update will succeed even with invalid types
     const invalidPush = await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-push-1' },
       { $push: { scores: 'invalid' } as any }
     );
     expect(invalidPush.modifiedCount).toBe(1);
   });
 
   test('should handle comprehensive update operators', async () => {
-    const userSchema = z.object({
-      _id: z.string(),
-      name: z.string(),
-      age: z.number().optional(),
-      email: z.string().optional(),
-      score: z.number().default(0),
-      lastLogin: z.date().optional(),
-      tags: z.array(z.string()).default([]),
-      settings: z.object({
-        theme: z.string().default('light'),
-        notifications: z.boolean().default(true),
-      }).default(() => ({ theme: 'light', notifications: true })),
-      counters: z.record(z.string(), z.number()).default({}),
-    });
+    interface UserSchema extends Document {
+      _id: string;
+      name: string;
+      age?: number;
+      email?: string;
+      score?: number;
+      lastLogin?: Date;
+      tags?: string[];
+      settings?: {
+        theme?: string;
+        notifications?: boolean;
+      };
+      counters?: Record<string, number>;
+    }
 
-    const User = client.model('users', zodAdapter(userSchema));
+    const User = client.model<UserSchema>('users');
 
     // Test $set operator
-    const doc = await User.insertOne({
+    await User.insertOne({
       _id: 'user-ops-1',
       name: 'Eve',
       age: 25,
@@ -445,116 +433,116 @@ describe('Sample Code Integration', () => {
     });
 
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $set: { age: 26, email: 'eve.new@example.com' } }
     );
 
-    let updated = await User.findOne({ _id: doc._id });
+    let updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.age).toBe(26);
     expect(updated?.email).toBe('eve.new@example.com');
 
     // Test $unset operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $unset: { email: '' } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.email).toBeUndefined();
 
     // Test $inc operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $inc: { score: 50 } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.score).toBe(150);
 
     // Test $mul operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $mul: { score: 2 } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.score).toBe(300);
 
     // Test $min operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $min: { score: 250 } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.score).toBe(250);
 
     // Test $max operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $max: { score: 400 } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.score).toBe(400);
 
     // Test $currentDate operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $currentDate: { lastLogin: true } }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.lastLogin).toBeInstanceOf(Date);
 
     // Test $addToSet operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $addToSet: { tags: 'unique1' } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.tags).toEqual(['unique1']);
 
     // Add same tag again (should not duplicate)
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $addToSet: { tags: 'unique1' } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.tags).toEqual(['unique1']);
 
     // Test $pull operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $push: { tags: { $each: ['remove-me', 'keep-me'] } } as any }
     );
 
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $pull: { tags: 'remove-me' } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.tags).toEqual(['unique1', 'keep-me']);
 
     // Test $pop operator (remove last element)
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $pop: { tags: 1 } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.tags).toEqual(['unique1']);
 
     // Test $rename operator
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $rename: { age: 'yearsOld' } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
+    updated = await User.findOne({ _id: 'user-ops-1' });
     expect(updated?.age).toBeUndefined();
     expect((updated as any)?.yearsOld).toBe(26);
 
@@ -589,29 +577,62 @@ describe('Sample Code Integration', () => {
 
     // Test nested field updates with operators
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $set: { 'settings.theme': 'dark' } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
-    expect(updated?.settings.theme).toBe('dark');
-    expect(updated?.settings.notifications).toBe(true); // Should remain
+    updated = await User.findOne({ _id: 'user-ops-1' });
+    expect(updated?.settings?.theme).toBe('dark');
 
     // Test record/map field updates
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $set: { 'counters.visits': 1 } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
-    expect(updated?.counters.visits).toBe(1);
+    updated = await User.findOne({ _id: 'user-ops-1' });
+    expect(updated?.counters?.visits).toBe(1);
 
     await User.updateOne(
-      { _id: doc._id },
+      { _id: 'user-ops-1' },
       { $inc: { 'counters.visits': 1 } as any }
     );
 
-    updated = await User.findOne({ _id: doc._id });
-    expect(updated?.counters.visits).toBe(2);
+    updated = await User.findOne({ _id: 'user-ops-1' });
+    expect(updated?.counters?.visits).toBe(2);
+  });
+
+  test('should handle ObjectId type', async () => {
+    interface UserSchema extends Document {
+      _id?: ObjectId;
+      name: string;
+      age: number;
+    }
+    
+    const User = client.model<UserSchema>('users');
+
+    // Test insertOne without _id (should auto-generate ObjectId)
+    const doc1 = await User.insertOne({
+      name: 'John',
+      age: 20,
+    });
+
+    expect(doc1).toBeDefined();
+    expect(doc1.insertedId).toBeDefined();
+
+    // Test findOne with auto-generated ObjectId
+    const foundDoc = await User.findOne({ name: 'John' });
+    expect(foundDoc).toBeDefined();
+    expect(foundDoc?.name).toBe('John');
+    expect(foundDoc?.age).toBe(20);
+    expect(foundDoc?._id).toBeDefined();
+
+    // Test updateOne with ObjectId
+    const updateResult = await User.updateOne({ name: 'John' }, { $set: { age: 21 } });
+    expect(updateResult.modifiedCount).toBe(1);
+
+    // Verify update
+    const updatedDoc = await User.findOne({ name: 'John' });
+    expect(updatedDoc?.age).toBe(21);
   });
 });

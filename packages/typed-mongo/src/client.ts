@@ -1,4 +1,4 @@
-import type { Db, MongoClient } from 'mongodb';
+import type { Db, MongoClient, Document } from 'mongodb';
 import { Model } from './model.js';
 
 /**
