@@ -1,5 +1,4 @@
 import type {
-  AggregateOptions,
   BulkWriteOptions,
   Collection,
   CountDocumentsOptions,
@@ -11,14 +10,11 @@ import type {
   FindOneAndUpdateOptions,
   FindOptions,
   InsertOneOptions,
-  InsertOneResult,
   UpdateOptions,
   UpdateResult,
   UpdateFilter,
   Document,
   Filter,
-  OptionalUnlessRequiredId,
-  ObjectId,
   OptionalId,
   InsertManyResult,
 } from "mongodb";
@@ -30,11 +26,8 @@ import type {
   PaprUpdateFilter,
   PaprMatchKeysAndValues,
   WithId,
-  WithMongoId,
-  DocumentForInsert,
 } from "../types/index.js";
 import { ValidationError } from "../utils/error.js";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 /**
  * Model class that provides type-safe MongoDB operations

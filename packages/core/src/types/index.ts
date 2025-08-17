@@ -2,19 +2,30 @@
 /* eslint-disable no-use-before-define */
 
 import type {
-  ObjectId,
-  OptionalId,
-  WithId,
-  Timestamp,
-  BSONType,
-  BSONTypeAlias,
+  AlternativeType,
+  ArrayElement,
   BitwiseFilter,
   BSONRegExp,
+  BSONType,
+  BSONTypeAlias,
   DeleteManyModel,
   DeleteOneModel,
+  Document,
+  IntegerType,
+  Join,
+  KeysOfAType,
+  NumericType,
+  OnlyFieldsOfType,
+  PullAllOperator,
+  PullOperator,
+  PushOperator,
   ReplaceOneModel,
+  SetFields,
+  Timestamp,
   UpdateManyModel,
   UpdateOneModel,
+  WithId,
+  ObjectId,
 } from 'mongodb';
 
 // ============================================================================
@@ -22,44 +33,6 @@ import type {
 // ============================================================================
 
 export type { WithId };
-
-/**
- * Numeric types for MongoDB operations
- */
-export type NumericType = number | bigint;
-export type IntegerType = number | bigint;
-
-/**
- * MongoDB ObjectId or string representation
- */
-export type ObjectIdLike = ObjectId | string;
-
-/**
- * Alternative type for MongoDB operations
- */
-export type AlternativeType<T> = T extends ReadonlyArray<infer U> ? T | U : T;
-
-/**
- * Array element type helper
- */
-export type ArrayElement<T> = T extends readonly (infer E)[] ? E : never;
-
-/**
- * Join array of strings with a delimiter
- */
-export type Join<T extends readonly unknown[], D extends string> = T extends readonly []
-  ? ''
-  : T extends readonly [infer F]
-  ? F extends string
-    ? F
-    : never
-  : T extends readonly [infer F, ...infer R]
-  ? F extends string
-    ? R extends readonly unknown[]
-      ? `${F}${D}${Join<R, D>}`
-      : never
-    : never
-  : never;
 
 /**
  * Property type extraction from dot notation path
@@ -99,40 +72,9 @@ export type NestedPaths<T, Depth extends number[]> = Depth['length'] extends 10
     }[Extract<keyof T, string>]
   : never;
 
-/**
- * Keys of a specific type
- */
-export type KeysOfAType<T, U> = {
-  [K in keyof T]: T[K] extends U ? K : never;
-}[keyof T];
-
-/**
- * Only fields of type helper
- */
-export type OnlyFieldsOfType<TSchema, TValue, TResult = TValue> = {
-  [K in keyof TSchema as TSchema[K] extends TValue ? K : never]?: TResult;
-};
-
-/**
- * Set fields type for MongoDB operations
- */
-export type SetFields<TSchema> = {
-  [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
-    ? TSchema[K][number] | { $each: TSchema[K] }
-    : TSchema[K];
-};
-
 // ============================================================================
 // Document Types
 // ============================================================================
-
-/**
- * Document for insert operations
- */
-export type DocumentForInsert<TSchema> =
-  TSchema extends { _id: ObjectId }
-    ? OptionalId<TSchema>
-    : TSchema;
 
 /**
  * Strict version that requires all non-_id fields to be present
@@ -287,38 +229,6 @@ export type PaprMatchKeysAndValues<TSchema> = PaprAllProperties<TSchema> &
   PaprArrayNestedProperties<TSchema>;
 
 /**
- * Pull operator type
- */
-export type PullOperator<TSchema> = {
-  [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
-    ? Partial<TSchema[K][number]> | PaprFilterOperators<TSchema[K][number]>
-    : never;
-};
-
-/**
- * Pull all operator type
- */
-export type PullAllOperator<TSchema> = {
-  [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
-    ? TSchema[K]
-    : never;
-};
-
-/**
- * Push operator type
- */
-export type PushOperator<TSchema> = {
-  [K in keyof TSchema]?: TSchema[K] extends readonly unknown[]
-    ? TSchema[K][number] | {
-        $each?: TSchema[K];
-        $position?: number;
-        $slice?: number;
-        $sort?: 1 | -1 | Record<string, 1 | -1>;
-      }
-    : never;
-};
-
-/**
  * MongoDB update filter
  */
 export interface PaprUpdateFilter<TSchema> {
@@ -451,7 +361,7 @@ export type PaprBulkWriteOperation<TSchema> =
     }
   | {
       insertOne: {
-        document: DocumentForInsert<TSchema>;
+        document: StrictOptionalId<TSchema>;
       };
     };
 

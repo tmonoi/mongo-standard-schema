@@ -1,6 +1,5 @@
-import { z, ZodObject, ZodString, ZodEffects, ZodOptional, type ZodTypeAny, type ZodRawShape } from 'zod';
-import type { Adapter, DocumentForInsert, Result, StrictOptionalId } from '@safe-mongo/core';
-import type { OptionalUnlessRequiredId } from 'mongodb';
+import { z, ZodObject, ZodString, ZodOptional } from 'zod';
+import type { Adapter, Result, StrictOptionalId } from '@safe-mongo/core';
 import { isObjectIdSchema } from './objectid.js';
 
 /**

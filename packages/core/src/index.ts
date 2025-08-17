@@ -12,7 +12,6 @@ export type {
   WithId,
   StrictOptionalId,
   StandardSchemaV1,
-  DocumentForInsert,
 } from './types/index.js';
 
 // Export utility functions
