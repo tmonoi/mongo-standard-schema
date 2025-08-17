@@ -12,12 +12,8 @@ export type {
   WithId,
   StrictOptionalId,
   StandardSchemaV1,
-  InferStandardInput,
-  InferStandardOutput,
   DocumentForInsert,
 } from './types/index.js';
-
-export { isStandardSchemaV1 } from './types/index.js';
 
 // Export utility functions
 export {

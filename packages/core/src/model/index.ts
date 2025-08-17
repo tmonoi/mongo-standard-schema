@@ -31,8 +31,8 @@ import type {
   PaprMatchKeysAndValues,
   WithId,
   WithMongoId,
+  DocumentForInsert,
 } from "../types/index.js";
-import type { DocumentForInsert } from "../types/utils.js";
 import { ValidationError } from "../utils/error.js";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 

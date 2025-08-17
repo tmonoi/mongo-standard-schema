@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { StrictOptionalId } from "../types/utils.js";
+import type { StrictOptionalId } from "../types/index.js";
 
 /**
  * Base interface for adapters
