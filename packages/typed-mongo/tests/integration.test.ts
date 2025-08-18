@@ -1,12 +1,60 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import type { ObjectId, Document } from 'mongodb';
+import { ObjectId as MongoObjectId } from 'mongodb';
 import { Client } from '../src/index.js';
+import type { Model } from '../src/model.js';
 
-describe('Sample Code Integration', () => {
+// Test schema types
+interface UserSchema extends Document {
+  _id: string;
+  name: string;
+  age: number;
+  email?: string;
+  tags?: string[];
+  scores?: number[];
+  profile?: {
+    bio: string;
+    avatar?: string;
+  };
+  settings?: {
+    theme: string;
+    notifications: boolean;
+  };
+  metadata?: {
+    created: Date;
+    updated?: Date;
+  };
+  counters?: Record<string, number>;
+}
+
+interface PostSchema extends Document {
+  _id: ObjectId;
+  title: string;
+  content: string;
+  authorId: string;
+  tags: string[];
+  likes: number;
+  comments: Array<{
+    id: string;
+    text: string;
+    authorId: string;
+    createdAt: Date;
+  }>;
+  published: boolean;
+  publishedAt?: Date;
+  metadata: {
+    views: number;
+    shares: number;
+  };
+}
+
+describe('typed-mongo Integration Tests', () => {
   let client: Client;
+  let User: Model<UserSchema>;
+  let Post: Model<PostSchema>;
 
   beforeEach(async () => {
-    // Use global test database
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const testDb = (globalThis as any).testDb;
     client = Client.initialize(testDb);
 
@@ -15,624 +63,1116 @@ describe('Sample Code Integration', () => {
     for (const collection of collections) {
       await testDb.collection(collection.name).deleteMany({});
     }
+
+    // Initialize models
+    User = client.model<UserSchema>('users');
+    Post = client.model<PostSchema>('posts');
   });
 
-  test('should work exactly as documented in the sample', async () => {
-    // Define the User type
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      age: number;
-    }
-    
-    const User = client.model<UserSchema>('users');
+  describe('insertOne', () => {
+    test('should insert a document with string _id', async () => {
+      const result = await User.insertOne({
+        _id: 'user1',
+        name: 'John Doe',
+        age: 30,
+        email: 'john@example.com',
+      });
 
-    // Test insertOne - _id is required for string schema
-    const doc1 = await User.insertOne({
-      _id: 'user1',
-      name: 'John',
-      age: 20,
+      expect(result.acknowledged).toBe(true);
+      expect(result.insertedId).toBe('user1');
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('John Doe');
+      expect(doc?.age).toBe(30);
+      expect(doc?.email).toBe('john@example.com');
     });
 
-    expect(doc1).toBeDefined();
-    expect(doc1.insertedId).toBeDefined();
+    test('should insert a document with ObjectId', async () => {
+      const objectId = new MongoObjectId();
+      const result = await Post.insertOne({
+        _id: objectId,
+        title: 'Test Post',
+        content: 'This is a test post',
+        authorId: 'user1',
+        tags: ['test', 'sample'],
+        likes: 0,
+        comments: [],
+        published: false,
+        metadata: {
+          views: 0,
+          shares: 0,
+        },
+      });
 
-    // Test findOne
-    const foundDoc = await User.findOne({ name: 'John' });
-    expect(foundDoc).toBeDefined();
-    expect(foundDoc?.name).toBe('John');
-    expect(foundDoc?.age).toBe(20);
-    expect(foundDoc?._id).toBe('user1');
+      expect(result.acknowledged).toBe(true);
+      expect(result.insertedId).toEqual(objectId);
 
-    // Test findById
-    const foundById = await User.findOne({ _id: 'user1' });
-    expect(foundById).toBeDefined();
-    expect(foundById?.name).toBe('John');
-    expect(foundById?._id).toBe('user1');
-
-    // Test updateOne
-    const updateResult = await User.updateOne({ _id: 'user1' }, { $set: { age: 21 } });
-    expect(updateResult.modifiedCount).toBe(1);
-
-    // Verify update
-    const updatedDoc = await User.findOne({ _id: 'user1' });
-    expect(updatedDoc?.age).toBe(21);
-
-    // Test findOneAndUpdate
-    const doc2 = await User.findOneAndUpdate({ _id: 'user1' }, { $set: { name: 'John Doe' } });
-    expect(doc2).toBeDefined();
-    expect(doc2?.name).toBe('John Doe');
-    expect(doc2?.age).toBe(21);
-
-    // Test deleteOne
-    const deleteResult = await User.deleteOne({ _id: 'user1' });
-    expect(deleteResult.deletedCount).toBe(1);
-
-    // Verify deletion
-    const deletedDoc = await User.findOne({ _id: 'user1' });
-    expect(deletedDoc).toBeNull();
-  });
-
-  test('should handle multiple documents', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      age: number;
-    }
-    
-    const User = client.model<UserSchema>('users');
-
-    // Test insertMany
-    const docs = await User.insertMany([
-      { _id: 'user3', name: 'Alice', age: 30 },
-      { _id: 'user4', name: 'Bob', age: 25 },
-      { _id: 'user5', name: 'Charlie', age: 35 },
-    ]);
-
-    expect(docs.insertedCount).toBe(3);
-    // insertedIds contains the actual IDs that were inserted
-    expect(docs.insertedIds).toBeDefined();
-    expect(Object.keys(docs.insertedIds)).toHaveLength(3);
-
-    // Test find
-    const allUsers = await User.find({});
-    expect(allUsers).toHaveLength(3);
-
-    // Test find with filter
-    const youngUsers = await User.find({ age: { $lt: 30 } });
-    expect(youngUsers).toHaveLength(1);
-    expect(youngUsers[0]?.name).toBe('Bob');
-
-    // Test countDocuments
-    const count = await User.countDocuments({});
-    expect(count).toBe(3);
-
-    // Test updateMany
-    const updateResult = await User.updateMany({ age: { $gte: 30 } }, { $inc: { age: 1 } });
-    expect(updateResult.modifiedCount).toBe(2);
-
-    // Test deleteMany
-    const deleteResult = await User.deleteMany({ age: { $gt: 30 } });
-    expect(deleteResult.deletedCount).toBe(2);
-
-    const remainingUsers = await User.find({});
-    expect(remainingUsers).toHaveLength(1);
-    expect(remainingUsers[0]?.name).toBe('Bob');
-  });
-
-  test('should handle optional fields', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      age?: number;
-      email?: string;
-    }
-    
-    const User = client.model<UserSchema>('users');
-
-    const doc = await User.insertOne({
-      _id: 'user6',
-      name: 'John',
+      const doc = await Post.findOne({ _id: objectId });
+      expect(doc).toBeDefined();
+      expect(doc?.title).toBe('Test Post');
+      expect(doc?.tags).toEqual(['test', 'sample']);
     });
-    expect(doc.insertedId).toBe('user6');
 
-    const foundDoc = await User.findOne({ _id: 'user6' });
-    expect(foundDoc?.name).toBe('John');
-    expect(foundDoc?.age).toBeUndefined();
+    test('should auto-generate ObjectId when not provided', async () => {
+      const result = await Post.insertOne({
+        title: 'Auto ID Post',
+        content: 'Post with auto-generated ID',
+        authorId: 'user1',
+        tags: [],
+        likes: 0,
+        comments: [],
+        published: true,
+        metadata: {
+          views: 0,
+          shares: 0,
+        },
+      });
 
-    // Test updateOne
-    const updateResult = await User.updateOne({ _id: 'user6' }, { $set: { age: 20 } });
-    expect(updateResult.modifiedCount).toBe(1);
-
-    // Test findOneAndUpdate
-    const updatedDoc = await User.findOneAndUpdate(
-      { _id: 'user6' }, 
-      { $set: { name: "John Doe" } }, 
-      { returnDocument: 'after' }
-    );
-    expect(updatedDoc?.age).toBe(20);
+      expect(result.acknowledged).toBe(true);
+      expect(result.insertedId).toBeDefined();
+      expect(result.insertedId).toBeInstanceOf(MongoObjectId);
+    });
   });
 
-  test('should handle nested objects', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      tags: Array<{
-        color?: string;
+  describe('insertMany', () => {
+    test('should insert multiple documents', async () => {
+      const users = [
+        { _id: 'user1', name: 'Alice', age: 25 },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35 },
+      ];
+
+      const result = await User.insertMany(users);
+      expect(result.acknowledged).toBe(true);
+      expect(result.insertedCount).toBe(3);
+      expect(Object.keys(result.insertedIds)).toHaveLength(3);
+
+      const allUsers = await User.find({});
+      expect(allUsers).toHaveLength(3);
+      expect(allUsers.map(u => u.name).sort()).toEqual(['Alice', 'Bob', 'Charlie']);
+    });
+
+    test('should handle empty array', async () => {
+      // MongoDB doesn't allow empty array for insertMany
+      // We need to handle this case in the model implementation
+      // For now, we'll test that it throws an error
+      await expect(User.insertMany([])).rejects.toThrow('Batch cannot be empty');
+    });
+  });
+
+  describe('findOne', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, email: 'alice@example.com' },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35, email: 'charlie@example.com' },
+      ]);
+    });
+
+    test('should find a document by _id', async () => {
+      const doc = await User.findOne({ _id: 'user2' });
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Bob');
+      expect(doc?.age).toBe(30);
+    });
+
+    test('should find a document by field', async () => {
+      const doc = await User.findOne({ name: 'Alice' });
+      expect(doc).toBeDefined();
+      expect(doc?._id).toBe('user1');
+      expect(doc?.age).toBe(25);
+    });
+
+    test('should find with complex filter', async () => {
+      const doc = await User.findOne({ age: { $gte: 30 }, email: { $exists: false } });
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Bob');
+    });
+
+    test('should return null when not found', async () => {
+      const doc = await User.findOne({ _id: 'nonexistent' });
+      expect(doc).toBeNull();
+    });
+
+    test('should support projection options', async () => {
+      const doc = await User.findOne({ _id: 'user1' }, { projection: { name: 1, _id: 0 } });
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Alice');
+      expect(doc?._id).toBeUndefined();
+    });
+  });
+
+  describe('find', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, tags: ['admin', 'user'] },
+        { _id: 'user2', name: 'Bob', age: 30, tags: ['user'] },
+        { _id: 'user3', name: 'Charlie', age: 35, tags: ['user', 'moderator'] },
+        { _id: 'user4', name: 'David', age: 28, tags: ['user'] },
+      ]);
+    });
+
+    test('should find all documents', async () => {
+      const docs = await User.find({});
+      expect(docs).toHaveLength(4);
+    });
+
+    test('should find with filter', async () => {
+      const docs = await User.find({ age: { $gte: 30 } });
+      expect(docs).toHaveLength(2);
+      expect(docs.map(d => d.name).sort()).toEqual(['Bob', 'Charlie']);
+    });
+
+    test('should find with $in operator', async () => {
+      const docs = await User.find({ _id: { $in: ['user1', 'user3'] } });
+      expect(docs).toHaveLength(2);
+      expect(docs.map(d => d.name).sort()).toEqual(['Alice', 'Charlie']);
+    });
+
+    test('should find with $or operator', async () => {
+      const docs = await User.find({
+        $or: [{ age: { $lt: 26 } }, { name: 'Charlie' }],
+      });
+      expect(docs).toHaveLength(2);
+      expect(docs.map(d => d.name).sort()).toEqual(['Alice', 'Charlie']);
+    });
+
+    test('should support sort option', async () => {
+      const docs = await User.find({}, { sort: { age: -1 } });
+      expect(docs.map(d => d.name)).toEqual(['Charlie', 'Bob', 'David', 'Alice']);
+    });
+
+    test('should support limit option', async () => {
+      const docs = await User.find({}, { limit: 2 });
+      expect(docs).toHaveLength(2);
+    });
+
+    test('should support skip option', async () => {
+      const docs = await User.find({}, { sort: { _id: 1 }, skip: 2 });
+      expect(docs).toHaveLength(2);
+      expect(docs.map(d => d._id)).toEqual(['user3', 'user4']);
+    });
+  });
+
+  describe('findCursor', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25 },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35 },
+      ]);
+    });
+
+    test('should return a cursor', async () => {
+      const cursor = User.findCursor({});
+      expect(cursor).toBeDefined();
+      expect(cursor.toArray).toBeDefined();
+
+      const docs = await cursor.toArray();
+      expect(docs).toHaveLength(3);
+    });
+
+    test('should support cursor operations', async () => {
+      const cursor = User.findCursor({ age: { $gte: 30 } });
+      const count = await cursor.count();
+      expect(count).toBe(2);
+
+      const docs = await cursor.toArray();
+      expect(docs).toHaveLength(2);
+    });
+  });
+
+  describe('updateOne', () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: 'user1',
+        name: 'Alice',
+        age: 25,
+        email: 'alice@example.com',
+        scores: [100, 200],
+      });
+    });
+
+    test('should update a document with $set', async () => {
+      const result = await User.updateOne(
+        { _id: 'user1' },
+        { $set: { age: 26, email: 'alice.new@example.com' } }
+      );
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.matchedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBe(26);
+      expect(doc?.email).toBe('alice.new@example.com');
+    });
+
+    test('should update with $inc operator', async () => {
+      const result = await User.updateOne({ _id: 'user1' }, { $inc: { age: 5 } });
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBe(30);
+    });
+
+    test('should update with $push operator', async () => {
+      const result = await User.updateOne(
+        { _id: 'user1' },
+        { $push: { scores: 300 } }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.scores).toEqual([100, 200, 300]);
+    });
+
+    test('should update with $unset operator', async () => {
+      const result = await User.updateOne({ _id: 'user1' }, { $unset: { email: '' } });
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.email).toBeUndefined();
+    });
+
+    test('should handle upsert option', async () => {
+      const result = await User.updateOne(
+        { _id: 'user2' },
+        { $set: { name: 'Bob', age: 30 } },
+        { upsert: true }
+      );
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.upsertedCount).toBe(1);
+      expect(result.upsertedId).toBe('user2');
+
+      const doc = await User.findOne({ _id: 'user2' });
+      expect(doc?.name).toBe('Bob');
+    });
+
+    test('should return zero modified when no match', async () => {
+      const result = await User.updateOne(
+        { _id: 'nonexistent' },
+        { $set: { age: 100 } }
+      );
+
+      expect(result.matchedCount).toBe(0);
+      expect(result.modifiedCount).toBe(0);
+    });
+  });
+
+  describe('updateMany', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, tags: ['user'] },
+        { _id: 'user2', name: 'Bob', age: 30, tags: ['user'] },
+        { _id: 'user3', name: 'Charlie', age: 35, tags: ['admin'] },
+      ]);
+    });
+
+    test('should update multiple documents', async () => {
+      const result = await User.updateMany(
+        { tags: 'user' },
+        { $set: { tags: ['user', 'verified'] } }
+      );
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.matchedCount).toBe(2);
+      expect(result.modifiedCount).toBe(2);
+
+      const users = await User.find({ tags: 'verified' });
+      expect(users).toHaveLength(2);
+    });
+
+    test('should update all documents with empty filter', async () => {
+      const result = await User.updateMany({}, { $inc: { age: 1 } });
+
+      expect(result.matchedCount).toBe(3);
+      expect(result.modifiedCount).toBe(3);
+
+      const users = await User.find({});
+      expect(users.map(u => u.age).sort()).toEqual([26, 31, 36]);
+    });
+
+    test('should handle complex update operations', async () => {
+      const result = await User.updateMany(
+        { age: { $gte: 30 } },
+        {
+          $set: { 'settings.theme': 'dark' },
+          $inc: { age: 10 },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(2);
+
+      const updated = await User.find({ age: { $gte: 40 } });
+      expect(updated).toHaveLength(2);
+      expect(updated[0]?.settings?.theme).toBe('dark');
+    });
+  });
+
+  describe('findOneAndUpdate', () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: 'user1',
+        name: 'Alice',
+        age: 25,
+        email: 'alice@example.com',
+      });
+    });
+
+    test('should find and update returning new document', async () => {
+      const doc = await User.findOneAndUpdate(
+        { _id: 'user1' },
+        { $set: { age: 26, name: 'Alice Updated' } }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.age).toBe(26);
+      expect(doc?.name).toBe('Alice Updated');
+    });
+
+    test('should return old document with returnDocument: before', async () => {
+      const doc = await User.findOneAndUpdate(
+        { _id: 'user1' },
+        { $set: { age: 26 } },
+        { returnDocument: 'before' }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.age).toBe(25); // Old value
+
+      const updated = await User.findOne({ _id: 'user1' });
+      expect(updated?.age).toBe(26); // New value
+    });
+
+    test('should handle upsert with findOneAndUpdate', async () => {
+      const doc = await User.findOneAndUpdate(
+        { _id: 'user2' },
+        { $set: { name: 'Bob', age: 30 } },
+        { upsert: true }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Bob');
+      expect(doc?.age).toBe(30);
+    });
+
+    test('should return null when no match and no upsert', async () => {
+      const doc = await User.findOneAndUpdate(
+        { _id: 'nonexistent' },
+        { $set: { age: 100 } }
+      );
+
+      expect(doc).toBeNull();
+    });
+
+    test('should support projection', async () => {
+      const doc = await User.findOneAndUpdate(
+        { _id: 'user1' },
+        { $set: { age: 26 } },
+        { projection: { name: 1, age: 1, _id: 0 } }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Alice');
+      expect(doc?.age).toBe(26);
+      expect(doc?._id).toBeUndefined();
+    });
+  });
+
+  describe('deleteOne', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25 },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35 },
+      ]);
+    });
+
+    test('should delete a single document', async () => {
+      const result = await User.deleteOne({ _id: 'user2' });
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.deletedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user2' });
+      expect(doc).toBeNull();
+
+      const remaining = await User.find({});
+      expect(remaining).toHaveLength(2);
+    });
+
+    test('should delete first matching document', async () => {
+      const result = await User.deleteOne({ age: { $gte: 30 } });
+
+      expect(result.deletedCount).toBe(1);
+
+      const remaining = await User.find({ age: { $gte: 30 } });
+      expect(remaining).toHaveLength(1); // Only one deleted
+    });
+
+    test('should return zero deleted when no match', async () => {
+      const result = await User.deleteOne({ _id: 'nonexistent' });
+
+      expect(result.deletedCount).toBe(0);
+
+      const all = await User.find({});
+      expect(all).toHaveLength(3);
+    });
+  });
+
+  describe('deleteMany', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25 },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35 },
+        { _id: 'user4', name: 'David', age: 40 },
+      ]);
+    });
+
+    test('should delete multiple documents', async () => {
+      const result = await User.deleteMany({ age: { $gte: 30 } });
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.deletedCount).toBe(3);
+
+      const remaining = await User.find({});
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.name).toBe('Alice');
+    });
+
+    test('should delete all documents with empty filter', async () => {
+      const result = await User.deleteMany({});
+
+      expect(result.deletedCount).toBe(4);
+
+      const remaining = await User.find({});
+      expect(remaining).toHaveLength(0);
+    });
+
+    test('should return zero deleted when no match', async () => {
+      const result = await User.deleteMany({ age: { $gt: 100 } });
+
+      expect(result.deletedCount).toBe(0);
+
+      const all = await User.find({});
+      expect(all).toHaveLength(4);
+    });
+  });
+
+  describe('findOneAndDelete', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, email: 'alice@example.com' },
+        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user3', name: 'Charlie', age: 35 },
+      ]);
+    });
+
+    test('should find and delete returning deleted document', async () => {
+      const doc = await User.findOneAndDelete({ _id: 'user2' });
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Bob');
+      expect(doc?.age).toBe(30);
+
+      const remaining = await User.findOne({ _id: 'user2' });
+      expect(remaining).toBeNull();
+    });
+
+    test('should return null when no match', async () => {
+      const doc = await User.findOneAndDelete({ _id: 'nonexistent' });
+
+      expect(doc).toBeNull();
+
+      const all = await User.find({});
+      expect(all).toHaveLength(3);
+    });
+
+    test('should support projection', async () => {
+      const doc = await User.findOneAndDelete(
+        { _id: 'user1' },
+        { projection: { name: 1, _id: 0 } }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Alice');
+      expect(doc?._id).toBeUndefined();
+      expect(doc?.email).toBeUndefined();
+    });
+
+    test('should support sort option', async () => {
+      const doc = await User.findOneAndDelete(
+        { age: { $gte: 30 } },
+        { sort: { age: -1 } }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe('Charlie'); // Highest age deleted first
+
+      const remaining = await User.find({ age: { $gte: 30 } });
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.name).toBe('Bob');
+    });
+  });
+
+  describe('countDocuments', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, tags: ['user'] },
+        { _id: 'user2', name: 'Bob', age: 30, tags: ['user', 'admin'] },
+        { _id: 'user3', name: 'Charlie', age: 35, tags: ['user'] },
+        { _id: 'user4', name: 'David', age: 40, tags: ['moderator'] },
+      ]);
+    });
+
+    test('should count all documents', async () => {
+      const count = await User.countDocuments();
+      expect(count).toBe(4);
+    });
+
+    test('should count with filter', async () => {
+      const count = await User.countDocuments({ age: { $gte: 30 } });
+      expect(count).toBe(3);
+    });
+
+    test('should count with complex filter', async () => {
+      const count = await User.countDocuments({
+        $or: [{ tags: 'admin' }, { age: { $gt: 35 } }],
+      });
+      expect(count).toBe(2);
+    });
+
+    test('should return zero for no matches', async () => {
+      const count = await User.countDocuments({ age: { $gt: 100 } });
+      expect(count).toBe(0);
+    });
+
+    test('should support limit option', async () => {
+      const count = await User.countDocuments({}, { limit: 2 });
+      expect(count).toBe(2);
+    });
+
+    test('should support skip option', async () => {
+      const count = await User.countDocuments({}, { skip: 2 });
+      expect(count).toBe(2);
+    });
+  });
+
+  describe('distinct', () => {
+    beforeEach(async () => {
+      await User.insertMany([
+        { _id: 'user1', name: 'Alice', age: 25, tags: ['user', 'admin'] },
+        { _id: 'user2', name: 'Bob', age: 30, tags: ['user'] },
+        { _id: 'user3', name: 'Charlie', age: 25, tags: ['user', 'moderator'] },
+        { _id: 'user4', name: 'David', age: 35, tags: ['user'] },
+      ]);
+    });
+
+    test('should get distinct values for a field', async () => {
+      const ages = await User.distinct('age');
+      expect(ages.sort()).toEqual([25, 30, 35]);
+    });
+
+    test('should get distinct values with filter', async () => {
+      const ages = await User.distinct('age', { tags: 'admin' });
+      expect(ages).toEqual([25]);
+    });
+
+    test('should get distinct array values', async () => {
+      const tags = await User.distinct('tags');
+      expect(tags.sort()).toEqual(['admin', 'moderator', 'user']);
+    });
+
+    test('should return empty array for no matches', async () => {
+      const ages = await User.distinct('age', { age: { $gt: 100 } });
+      expect(ages).toEqual([]);
+    });
+  });
+
+  describe('Complex nested operations', () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: 'user1',
+        name: 'Alice',
+        age: 25,
+        profile: {
+          bio: 'Software Developer',
+          avatar: 'avatar1.jpg',
+        },
+        settings: {
+          theme: 'light',
+          notifications: true,
+        },
+        counters: {
+          posts: 10,
+          likes: 100,
+        },
+      });
+    });
+
+    test('should update nested fields with dot notation', async () => {
+      const result = await User.updateOne(
+        { _id: 'user1' },
+        {
+          $set: {
+            'profile.bio': 'Senior Developer',
+            'settings.theme': 'dark',
+          },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.profile?.bio).toBe('Senior Developer');
+      expect(doc?.profile?.avatar).toBe('avatar1.jpg'); // Unchanged
+      expect(doc?.settings?.theme).toBe('dark');
+      expect(doc?.settings?.notifications).toBe(true); // Unchanged
+    });
+
+    test('should increment nested counters', async () => {
+      const result = await User.updateOne(
+        { _id: 'user1' },
+        {
+          $inc: {
+            'counters.posts': 1,
+            'counters.likes': 10,
+          },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.counters?.posts).toBe(11);
+      expect(doc?.counters?.likes).toBe(110);
+    });
+
+    test('should query by nested fields', async () => {
+      const doc = await User.findOne({ 'profile.bio': 'Software Developer' });
+      expect(doc).toBeDefined();
+      expect(doc?._id).toBe('user1');
+
+      const count = await User.countDocuments({ 'settings.notifications': true });
+      expect(count).toBe(1);
+    });
+  });
+
+  describe('Array operations', () => {
+    beforeEach(async () => {
+      await Post.insertOne({
+        title: 'Test Post',
+        content: 'Content',
+        authorId: 'user1',
+        tags: ['javascript', 'nodejs'],
+        likes: 10,
+        comments: [
+          {
+            id: 'comment1',
+            text: 'Great post!',
+            authorId: 'user2',
+            createdAt: new Date('2024-01-01'),
+          },
+          {
+            id: 'comment2',
+            text: 'Thanks for sharing',
+            authorId: 'user3',
+            createdAt: new Date('2024-01-02'),
+          },
+        ],
+        published: true,
+        publishedAt: new Date('2024-01-01'),
+        metadata: {
+          views: 100,
+          shares: 5,
+        },
+      });
+    });
+
+    test('should push to array', async () => {
+      const result = await Post.updateOne(
+        { title: 'Test Post' },
+        {
+          $push: {
+            tags: 'typescript',
+            comments: {
+              id: 'comment3',
+              text: 'New comment',
+              authorId: 'user4',
+              createdAt: new Date(),
+            },
+          },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await Post.findOne({ title: 'Test Post' });
+      expect(doc?.tags).toContain('typescript');
+      expect(doc?.comments).toHaveLength(3);
+    });
+
+    test('should pull from array', async () => {
+      const result = await Post.updateOne(
+        { title: 'Test Post' },
+        {
+          $pull: {
+            tags: 'nodejs',
+            comments: { id: 'comment1' },
+          },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await Post.findOne({ title: 'Test Post' });
+      expect(doc?.tags).toEqual(['javascript']);
+      expect(doc?.comments).toHaveLength(1);
+      expect(doc?.comments[0]?.id).toBe('comment2');
+    });
+
+    test('should use $addToSet for unique values', async () => {
+      // Add existing tag
+      await Post.updateOne(
+        { title: 'Test Post' },
+        { $addToSet: { tags: 'javascript' } }
+      );
+
+      const doc = await Post.findOne({ title: 'Test Post' });
+      expect(doc?.tags).toEqual(['javascript', 'nodejs']); // No duplicate
+
+      // Add new tag
+      await Post.updateOne(
+        { title: 'Test Post' },
+        { $addToSet: { tags: 'react' } }
+      );
+
+      const doc2 = await Post.findOne({ title: 'Test Post' });
+      expect(doc2?.tags).toEqual(['javascript', 'nodejs', 'react']);
+    });
+
+    test('should use $pop to remove from array ends', async () => {
+      // Remove from end
+      await Post.updateOne(
+        { title: 'Test Post' },
+        { $pop: { tags: 1 } }
+      );
+
+      let doc = await Post.findOne({ title: 'Test Post' });
+      expect(doc?.tags).toEqual(['javascript']);
+
+      // Add more tags
+      await Post.updateOne(
+        { title: 'Test Post' },
+        { $push: { tags: { $each: ['react', 'vue', 'angular'] } } }
+      );
+
+      // Remove from beginning
+      await Post.updateOne(
+        { title: 'Test Post' },
+        { $pop: { tags: -1 } }
+      );
+
+      doc = await Post.findOne({ title: 'Test Post' });
+      expect(doc?.tags).toEqual(['react', 'vue', 'angular']);
+    });
+
+    test('should query arrays with $elemMatch', async () => {
+      const doc = await Post.findOne({
+        comments: {
+          $elemMatch: {
+            authorId: 'user2',
+            text: { $regex: 'Great' },
+          },
+        },
+      });
+
+      expect(doc).toBeDefined();
+      expect(doc?.title).toBe('Test Post');
+    });
+
+    test('should query arrays with $size', async () => {
+      const doc = await Post.findOne({
+        tags: { $size: 2 },
+      });
+
+      expect(doc).toBeDefined();
+      expect(doc?.tags).toHaveLength(2);
+    });
+
+    test('should query arrays with $all', async () => {
+      const doc = await Post.findOne({
+        tags: { $all: ['javascript', 'nodejs'] },
+      });
+
+      expect(doc).toBeDefined();
+
+      const notFound = await Post.findOne({
+        tags: { $all: ['javascript', 'python'] },
+      });
+
+      expect(notFound).toBeNull();
+    });
+  });
+
+  describe('Update operators', () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: 'user1',
+        name: 'Alice',
+        age: 25,
+        scores: [100, 200, 300],
+        counters: {
+          posts: 10,
+          likes: 50,
+        },
+      });
+    });
+
+    test('should use $mul operator', async () => {
+      const result = await User.updateOne(
+        { _id: 'user1' },
+        { $mul: { age: 2, 'counters.posts': 3 } }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBe(50);
+      expect(doc?.counters?.posts).toBe(30);
+    });
+
+    test('should use $min operator', async () => {
+      await User.updateOne(
+        { _id: 'user1' },
+        { $min: { age: 20, 'counters.likes': 100 } }
+      );
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBe(20); // Updated to lower value
+      expect(doc?.counters?.likes).toBe(50); // Unchanged (already lower)
+    });
+
+    test('should use $max operator', async () => {
+      await User.updateOne(
+        { _id: 'user1' },
+        { $max: { age: 30, 'counters.likes': 40 } }
+      );
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBe(30); // Updated to higher value
+      expect(doc?.counters?.likes).toBe(50); // Unchanged (already higher)
+    });
+
+    test('should use $currentDate operator', async () => {
+      await User.updateOne(
+        { _id: 'user1' },
+        { $currentDate: { 'metadata.updated': true } }
+      );
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.metadata?.updated).toBeInstanceOf(Date);
+      
+      const now = new Date();
+      const updated = doc?.metadata?.updated as Date;
+      const diff = now.getTime() - updated.getTime();
+      expect(diff).toBeLessThan(5000); // Within 5 seconds
+    });
+
+    test('should use $rename operator', async () => {
+      await User.updateOne(
+        { _id: 'user1' },
+        { $rename: { age: 'yearsOld', 'counters.posts': 'counters.articles' } }
+      );
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.age).toBeUndefined();
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      expect((doc as any)?.yearsOld).toBe(25);
+      expect(doc?.counters?.posts).toBeUndefined();
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      expect((doc?.counters as any)?.articles).toBe(10);
+    });
+
+    test('should use $setOnInsert with upsert', async () => {
+      const result = await User.updateOne(
+        { _id: 'user2' },
+        {
+          $set: { name: 'Bob' },
+          $setOnInsert: { age: 30, email: 'bob@example.com' },
+        },
+        { upsert: true }
+      );
+
+      expect(result.upsertedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: 'user2' });
+      expect(doc?.name).toBe('Bob');
+      expect(doc?.age).toBe(30);
+      expect(doc?.email).toBe('bob@example.com');
+
+      // Update existing document (setOnInsert should not apply)
+      await User.updateOne(
+        { _id: 'user2' },
+        {
+          $set: { name: 'Bob Updated' },
+          $setOnInsert: { age: 99 },
+        },
+        { upsert: true }
+      );
+
+      const doc2 = await User.findOne({ _id: 'user2' });
+      expect(doc2?.name).toBe('Bob Updated');
+      expect(doc2?.age).toBe(30); // Unchanged
+    });
+
+    test('should use $pullAll operator', async () => {
+      await User.updateOne(
+        { _id: 'user1' },
+        { $pullAll: { scores: [100, 300] } }
+      );
+
+      const doc = await User.findOne({ _id: 'user1' });
+      expect(doc?.scores).toEqual([200]);
+    });
+  });
+
+  describe('Bulk operations', () => {
+    test('should perform bulk inserts', async () => {
+      const users = Array.from({ length: 100 }, (_, i) => ({
+        _id: `user${i}`,
+        name: `User ${i}`,
+        age: 20 + (i % 30),
+      }));
+
+      const result = await User.insertMany(users);
+      expect(result.insertedCount).toBe(100);
+
+      const count = await User.countDocuments();
+      expect(count).toBe(100);
+    });
+
+    test('should handle large find operations', async () => {
+      // Insert many documents with padded IDs for proper sorting
+      const users = Array.from({ length: 50 }, (_, i) => ({
+        _id: `user${i.toString().padStart(2, '0')}`,
+        name: `User ${i}`,
+        age: 20 + (i % 30),
+      }));
+
+      await User.insertMany(users);
+
+      // Find with pagination
+      const page1 = await User.find({}, { limit: 10, sort: { _id: 1 } });
+      expect(page1).toHaveLength(10);
+      expect(page1[0]?._id).toBe('user00');
+
+      const page2 = await User.find({}, { limit: 10, skip: 10, sort: { _id: 1 } });
+      expect(page2).toHaveLength(10);
+      expect(page2[0]?._id).toBe('user10');
+    });
+  });
+
+  describe('Client operations', () => {
+    test('should get database instance', () => {
+      const db = client.getDb();
+      expect(db).toBeDefined();
+      expect(db.databaseName).toBeDefined();
+    });
+
+    test('should create multiple models', () => {
+      const model1 = client.model<UserSchema>('collection1');
+      const model2 = client.model<PostSchema>('collection2');
+
+      expect(model1).toBeDefined();
+      expect(model2).toBeDefined();
+      expect(model1).not.toBe(model2);
+    });
+
+    test('should close connection', async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      const testDb = (globalThis as any).testDb;
+      const testClient = Client.initialize(testDb);
+      
+      // Verify it works
+      const model = testClient.model<UserSchema>('test');
+      await model.insertOne({ _id: 'test1', name: 'Test', age: 25 });
+      
+      // Close should not throw
+      await expect(testClient.close()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('Error handling', () => {
+    test('should handle duplicate key errors', async () => {
+      await User.insertOne({ _id: 'user1', name: 'Alice', age: 25 });
+
+      // Try to insert duplicate
+      await expect(
+        User.insertOne({ _id: 'user1', name: 'Bob', age: 30 })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Type safety', () => {
+    test('should work with strict typing', async () => {
+      interface StrictUser extends Document {
+        _id: string;
         name: string;
-      }>;
-    }
+        age: number;
+        email: string; // Required
+      }
 
-    const User = client.model<UserSchema>('users');
+      const StrictUserModel = client.model<StrictUser>('strict_users');
 
-    await User.insertOne({
-      _id: 'user7',
-      tags: [
-        { name: 'tag1' },
-        { name: 'tag2', color: 'green' },
-      ],
+      // This should work
+      await StrictUserModel.insertOne({
+        _id: 'strict1',
+        name: 'Alice',
+        age: 25,
+        email: 'alice@example.com',
+      });
+
+      // TypeScript would catch missing required fields at compile time
+      // But at runtime, MongoDB allows it
+      // @ts-expect-error Testing missing required field
+      const result = await StrictUserModel.insertOne({
+        _id: 'strict2',
+        name: 'Bob',
+        age: 30,
+      });
+
+      expect(result.acknowledged).toBe(true);
     });
 
-    const foundDoc = await User.findOne({ _id: 'user7' });
-    expect(foundDoc?.tags).toHaveLength(2);
-    expect(foundDoc?.tags[0]?.color).toBeUndefined();
-    expect(foundDoc?.tags[1]?.color).toBe('green');
+    test('should handle ObjectId vs string _id correctly', async () => {
+      // String ID model
+      const stringDoc = await User.insertOne({
+        _id: 'string-id',
+        name: 'String ID User',
+        age: 25,
+      });
+      expect(typeof stringDoc.insertedId).toBe('string');
 
-    const updatedDoc = await User.findOneAndUpdate(
-      { _id: 'user7' }, 
-      { $set: { tags: [{ name: 'tag3', color: 'red' }] } }, 
-      { returnDocument: 'after' }
-    );
-    expect(updatedDoc?.tags).toHaveLength(1);
-    expect(updatedDoc?.tags[0]?.color).toBe('red');
-    expect(updatedDoc?.tags[0]?.name).toBe('tag3');
-  });
-
-  test('should handle nested field updates with dot notation', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      address?: {
-        line?: string;
-        city?: string;
-        zip?: string;
-      };
-      profile?: {
-        bio?: string;
-        age?: number;
-      };
-    }
-
-    const User = client.model<UserSchema>('users');
-
-    // Insert initial document
-    await User.insertOne({
-      _id: 'user-nested-1',
-      name: 'Alice',
-      address: {
-        line: '123 Main St',
-        city: 'New York',
-      },
+      // ObjectId model
+      const objectIdDoc = await Post.insertOne({
+        title: 'ObjectId Post',
+        content: 'Content',
+        authorId: 'user1',
+        tags: [],
+        likes: 0,
+        comments: [],
+        published: false,
+        metadata: { views: 0, shares: 0 },
+      });
+      expect(objectIdDoc.insertedId).toBeInstanceOf(MongoObjectId);
     });
-
-    const foundDoc = await User.findOne({ _id: 'user-nested-1' });
-    expect(foundDoc?.address?.line).toBe('123 Main St');
-    expect(foundDoc?.address?.city).toBe('New York');
-
-    // Test nested field update with dot notation
-    const updateResult = await User.updateOne(
-      { _id: 'user-nested-1' },
-      { $set: { 'address.line': '456 Oak Ave' } as any }
-    );
-    expect(updateResult.modifiedCount).toBe(1);
-
-    const updated = await User.findOne({ _id: 'user-nested-1' });
-    expect(updated?.address?.line).toBe('456 Oak Ave');
-    expect(updated?.address?.city).toBe('New York'); // Other fields should remain
-
-    // MongoDB doesn't validate types on update by default
-    // So invalid updates will succeed at runtime
-    const invalidUpdate = await User.updateOne(
-      { _id: 'user-nested-1' },
-      { $set: { 'profile.age': 'invalid' } as any }
-    );
-    // The update will succeed but the value will be invalid
-    expect(invalidUpdate.modifiedCount).toBe(1);
-
-    // Test with document without nested fields
-    await User.insertOne({
-      _id: 'user-nested-2',
-      name: 'Bob',
-    });
-    
-    const foundDoc2 = await User.findOne({ _id: 'user-nested-2' });
-    expect(foundDoc2?.address).toBeUndefined();
-
-    // Update nested field that doesn't exist yet
-    await User.updateOne(
-      { _id: 'user-nested-2' },
-      { $set: { 'address.zip': '12345' } as any }
-    );
-    
-    const updated2 = await User.findOne({ _id: 'user-nested-2' });
-    expect(updated2?.address?.zip).toBe('12345');
-  });
-
-  test('should handle whole object updates', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      address?: {
-        line?: string;
-        city?: string;
-        country?: string;
-      };
-      metadata?: {
-        created?: Date;
-        updated?: Date;
-      };
-    }
-
-    const User = client.model<UserSchema>('users');
-
-    // Insert initial document
-    await User.insertOne({
-      _id: 'user-object-1',
-      name: 'Charlie',
-      address: {
-        line: '789 Pine St',
-        city: 'Boston',
-        country: 'USA',
-      },
-    });
-
-    // Update entire address object
-    const newAddress = {
-      line: '321 Elm St',
-      city: 'Seattle',
-      country: 'USA',
-    };
-
-    const updateResult = await User.updateOne(
-      { _id: 'user-object-1' },
-      { $set: { address: newAddress } }
-    );
-    expect(updateResult.modifiedCount).toBe(1);
-
-    const updated = await User.findOne({ _id: 'user-object-1' });
-    expect(updated?.address).toEqual(newAddress);
-
-    // MongoDB doesn't validate types on update by default
-    // The update will succeed but with invalid types
-    const invalidUpdate = await User.updateOne(
-      { _id: 'user-object-1' },
-      { $set: { address: { line: 123 as any, city: 'Invalid' } } }
-    );
-    expect(invalidUpdate.modifiedCount).toBe(1);
-
-    // Test with partial object
-    const partialAddress = { line: '999 Market St' };
-    await User.updateOne(
-      { _id: 'user-object-1' },
-      { $set: { address: partialAddress } }
-    );
-
-    const updated2 = await User.findOne({ _id: 'user-object-1' });
-    expect(updated2?.address?.line).toBe('999 Market St');
-    expect(updated2?.address?.city).toBeUndefined();
-    expect(updated2?.address?.country).toBeUndefined();
-  });
-
-  test('should handle $push operator', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      tags?: string[];
-      scores?: number[];
-      items?: Array<{
-        id: string;
-        name: string;
-        quantity?: number;
-      }>;
-    }
-
-    const User = client.model<UserSchema>('users');
-
-    // Insert initial document
-    await User.insertOne({
-      _id: 'user-push-1',
-      name: 'David',
-      tags: ['initial'],
-      scores: [100],
-    });
-
-    // Test $push with single value
-    await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { tags: 'new-tag' } as any }
-    );
-
-    let updated = await User.findOne({ _id: 'user-push-1' });
-    expect(updated?.tags).toEqual(['initial', 'new-tag']);
-
-    // Test $push with multiple values using $each
-    await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { tags: { $each: ['tag2', 'tag3'] } } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-push-1' });
-    expect(updated?.tags).toEqual(['initial', 'new-tag', 'tag2', 'tag3']);
-
-    // Test $push with number array
-    await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { scores: 200 } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-push-1' });
-    expect(updated?.scores).toEqual([100, 200]);
-
-    // Test $push with object
-    const newItem = { id: 'item1', name: 'Item 1', quantity: 5 };
-    await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { items: newItem } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-push-1' });
-    expect(updated?.items).toHaveLength(1);
-    expect(updated?.items?.[0]).toEqual(newItem);
-
-    // Test $push with object without optional fields
-    // MongoDB doesn't apply schema defaults on $push operations
-    const itemWithoutQuantity = { id: 'item2', name: 'Item 2' };
-    await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { items: itemWithoutQuantity } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-push-1' });
-    expect(updated?.items).toHaveLength(2);
-    // MongoDB doesn't apply defaults on $push, so quantity will be undefined
-    expect(updated?.items?.[1]?.quantity).toBeUndefined();
-
-    // MongoDB doesn't validate types on update
-    // The update will succeed even with invalid types
-    const invalidPush = await User.updateOne(
-      { _id: 'user-push-1' },
-      { $push: { scores: 'invalid' } as any }
-    );
-    expect(invalidPush.modifiedCount).toBe(1);
-  });
-
-  test('should handle comprehensive update operators', async () => {
-    interface UserSchema extends Document {
-      _id: string;
-      name: string;
-      age?: number;
-      email?: string;
-      score?: number;
-      lastLogin?: Date;
-      tags?: string[];
-      settings?: {
-        theme?: string;
-        notifications?: boolean;
-      };
-      counters?: Record<string, number>;
-    }
-
-    const User = client.model<UserSchema>('users');
-
-    // Test $set operator
-    await User.insertOne({
-      _id: 'user-ops-1',
-      name: 'Eve',
-      age: 25,
-      email: 'eve@example.com',
-      score: 100,
-    });
-
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $set: { age: 26, email: 'eve.new@example.com' } }
-    );
-
-    let updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.age).toBe(26);
-    expect(updated?.email).toBe('eve.new@example.com');
-
-    // Test $unset operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $unset: { email: '' } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.email).toBeUndefined();
-
-    // Test $inc operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $inc: { score: 50 } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.score).toBe(150);
-
-    // Test $mul operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $mul: { score: 2 } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.score).toBe(300);
-
-    // Test $min operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $min: { score: 250 } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.score).toBe(250);
-
-    // Test $max operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $max: { score: 400 } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.score).toBe(400);
-
-    // Test $currentDate operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $currentDate: { lastLogin: true } }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.lastLogin).toBeInstanceOf(Date);
-
-    // Test $addToSet operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $addToSet: { tags: 'unique1' } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.tags).toEqual(['unique1']);
-
-    // Add same tag again (should not duplicate)
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $addToSet: { tags: 'unique1' } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.tags).toEqual(['unique1']);
-
-    // Test $pull operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $push: { tags: { $each: ['remove-me', 'keep-me'] } } as any }
-    );
-
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $pull: { tags: 'remove-me' } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.tags).toEqual(['unique1', 'keep-me']);
-
-    // Test $pop operator (remove last element)
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $pop: { tags: 1 } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.tags).toEqual(['unique1']);
-
-    // Test $rename operator
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $rename: { age: 'yearsOld' } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.age).toBeUndefined();
-    expect((updated as any)?.yearsOld).toBe(26);
-
-    // Test $setOnInsert with upsert
-    await User.updateOne(
-      { _id: 'user-ops-2' },
-      {
-        $set: { name: 'Frank' },
-        $setOnInsert: { score: 500, age: 30 }
-      },
-      { upsert: true }
-    );
-
-    const upserted = await User.findOne({ _id: 'user-ops-2' });
-    expect(upserted?.name).toBe('Frank');
-    expect(upserted?.score).toBe(500);
-    expect(upserted?.age).toBe(30);
-
-    // Update again (setOnInsert should not apply)
-    await User.updateOne(
-      { _id: 'user-ops-2' },
-      {
-        $set: { name: 'Frank Updated' },
-        $setOnInsert: { score: 999 }
-      },
-      { upsert: true }
-    );
-
-    const notUpserted = await User.findOne({ _id: 'user-ops-2' });
-    expect(notUpserted?.name).toBe('Frank Updated');
-    expect(notUpserted?.score).toBe(500); // Should not change
-
-    // Test nested field updates with operators
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $set: { 'settings.theme': 'dark' } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.settings?.theme).toBe('dark');
-
-    // Test record/map field updates
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $set: { 'counters.visits': 1 } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.counters?.visits).toBe(1);
-
-    await User.updateOne(
-      { _id: 'user-ops-1' },
-      { $inc: { 'counters.visits': 1 } as any }
-    );
-
-    updated = await User.findOne({ _id: 'user-ops-1' });
-    expect(updated?.counters?.visits).toBe(2);
-  });
-
-  test('should handle ObjectId type', async () => {
-    interface UserSchema extends Document {
-      _id?: ObjectId;
-      name: string;
-      age: number;
-    }
-    
-    const User = client.model<UserSchema>('users');
-
-    // Test insertOne without _id (should auto-generate ObjectId)
-    const doc1 = await User.insertOne({
-      name: 'John',
-      age: 20,
-    });
-
-    expect(doc1).toBeDefined();
-    expect(doc1.insertedId).toBeDefined();
-
-    // Test findOne with auto-generated ObjectId
-    const foundDoc = await User.findOne({ name: 'John' });
-    expect(foundDoc).toBeDefined();
-    expect(foundDoc?.name).toBe('John');
-    expect(foundDoc?.age).toBe(20);
-    expect(foundDoc?._id).toBeDefined();
-
-    // Test updateOne with ObjectId
-    const updateResult = await User.updateOne({ name: 'John' }, { $set: { age: 21 } });
-    expect(updateResult.modifiedCount).toBe(1);
-
-    // Verify update
-    const updatedDoc = await User.findOne({ name: 'John' });
-    expect(updatedDoc?.age).toBe(21);
   });
 });
