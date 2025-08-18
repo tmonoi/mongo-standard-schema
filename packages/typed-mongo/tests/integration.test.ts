@@ -304,7 +304,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(result.modifiedCount).toBe(1);
       expect(result.matchedCount).toBe(1);
 
-      const doc = await User.findOne({ _id: 'user1' });
+      const doc = await User.findOne({ _id: 'user1' }); 
       expect(doc?.age).toBe(26);
       expect(doc?.email).toBe('alice.new@example.com');
     });
