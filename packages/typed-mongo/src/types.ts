@@ -28,49 +28,13 @@ import type {
   ObjectId,
 } from 'mongodb';
 
+import type { NestedPaths, PropertyType } from './utils';
+
 // ============================================================================
 // Basic Types and Utilities
 // ============================================================================
 
 export type { WithId };
-
-/**
- * Property type extraction from dot notation path
- */
-export type PropertyType<TSchema, Property extends string> = string extends Property
-  ? unknown
-  : Property extends keyof TSchema
-  ? TSchema[Property]
-  : Property extends `${infer Key}.${infer Rest}`
-  ? Key extends keyof TSchema
-    ? PropertyType<TSchema[Key], Rest>
-    : unknown
-  : unknown;
-
-/**
- * Nested paths generation with depth limit
- */
-export type NestedPaths<T, Depth extends number[]> = Depth['length'] extends 10
-  ? never
-  : T extends any[]
-  ? never
-  : T extends Date
-  ? never
-  : T extends ObjectId
-  ? never
-  : T extends object
-  ? {
-      [K in Extract<keyof T, string>]: T[K] extends any[]
-        ? [K]
-        : T[K] extends Date
-        ? [K]
-        : T[K] extends ObjectId
-        ? [K]
-        : T[K] extends object
-        ? [K] | [K, ...NestedPaths<T[K], [...Depth, 1]>]
-        : [K];
-    }[Extract<keyof T, string>]
-  : never;
 
 // ============================================================================
 // Document Types
