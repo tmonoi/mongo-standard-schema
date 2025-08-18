@@ -16,9 +16,6 @@ import type {
   KeysOfAType,
   NumericType,
   OnlyFieldsOfType,
-  PullAllOperator,
-  PullOperator,
-  PushOperator,
   ReplaceOneModel,
   SetFields,
   Timestamp,
@@ -157,6 +154,39 @@ export interface PaprFilterOperators<TValue> {
 // ============================================================================
 
 /**
+ * Custom PushOperator type that properly handles array fields
+ */
+export type PaprPushOperator<TSchema> = {
+  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?:
+    | ArrayElement<TSchema[K]>
+    | {
+        $each?: ArrayElement<TSchema[K]>[];
+        $slice?: number;
+        $position?: number;
+        $sort?: 1 | -1 | Record<string, 1 | -1>;
+      };
+};
+
+/**
+ * Custom PullOperator type that properly handles array fields
+ */
+export type PaprPullOperator<TSchema> = {
+  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?:
+    | ArrayElement<TSchema[K]>
+    | Partial<ArrayElement<TSchema[K]>>
+    | PaprFilterOperators<ArrayElement<TSchema[K]>>;
+};
+
+/**
+ * Custom PullAllOperator type that properly handles array fields
+ */
+export type PaprPullAllOperator<TSchema> = {
+  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?: ArrayElement<
+    TSchema[K]
+  >[];
+};
+
+/**
  * Returns all dot-notation properties of a schema with their corresponding types.
  */
 export type PaprAllProperties<TSchema> = {
@@ -182,7 +212,7 @@ export type PaprArrayElementsProperties<TSchema> = {
 export type PaprArrayNestedProperties<TSchema> = {
   [Property in `${Extract<KeysOfAType<PaprAllProperties<TSchema>, Record<string, any>[]>, string>}.$${
     | ''
-    | `[${string}]`}.${string}`]?: any;
+    | `[${string}]`}.${string}`]?: PropertyType<TSchema, Property extends `${infer Base}.$${string}.${infer Rest}` ? `${Base}.0.${Rest}` : never>;
 };
 
 /**
@@ -211,12 +241,14 @@ export interface PaprUpdateFilter<TSchema> {
   $rename?: Record<string, string>;
   $set?: PaprMatchKeysAndValues<TSchema>;
   $setOnInsert?: PaprMatchKeysAndValues<TSchema>;
-  $unset?: OnlyFieldsOfType<TSchema, any, '' | 1 | true>;
+  $unset?: {
+    [K in keyof PaprMatchKeysAndValues<TSchema>]?: '' | 1 | true;
+  };
   $addToSet?: SetFields<TSchema>;
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
-  $pull?: PullOperator<TSchema>;
-  $push?: PushOperator<TSchema>;
-  $pullAll?: PullAllOperator<TSchema>;
+  $pull?: PaprPullOperator<TSchema>;
+  $push?: PaprPushOperator<TSchema>;
+  $pullAll?: PaprPullAllOperator<TSchema>;
   $bit?: OnlyFieldsOfType<
     TSchema,
     NumericType | undefined,

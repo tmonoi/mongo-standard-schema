@@ -19,7 +19,7 @@
   "scripts": {
     "build": "pnpm run clean && tsup && tsc -p tsconfig.build.json --emitDeclarationOnly --declaration",
     "dev": "concurrently \"tsup --watch\" \"tsc -p tsconfig.build.json --emitDeclarationOnly --declaration --watch\"",
-    "test": "vitest run",
+    "test": "vitest run --typecheck",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
