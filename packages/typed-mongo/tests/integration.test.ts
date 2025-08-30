@@ -148,7 +148,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(result.insertedCount).toBe(3);
       expect(Object.keys(result.insertedIds)).toHaveLength(3);
 
-      const allUsers = await User.find({});
+      const allUsers = await User.findMany({});
       expect(allUsers).toHaveLength(3);
       expect(allUsers.map(u => u.name).sort()).toEqual(['Alice', 'Bob', 'Charlie']);
     });
@@ -203,7 +203,7 @@ describe('typed-mongo Integration Tests', () => {
     });
   });
 
-  describe('find', () => {
+  describe('findMany', () => {
     beforeEach(async () => {
       await User.insertMany([
         { _id: 'user1', name: 'Alice', age: 25, tags: ['admin', 'user'] },
@@ -214,24 +214,24 @@ describe('typed-mongo Integration Tests', () => {
     });
 
     test('should find all documents', async () => {
-      const docs = await User.find({});
+      const docs = await User.findMany({});
       expect(docs).toHaveLength(4);
     });
 
     test('should find with filter', async () => {
-      const docs = await User.find({ age: { $gte: 30 } });
+      const docs = await User.findMany({ age: { $gte: 30 } });
       expect(docs).toHaveLength(2);
       expect(docs.map(d => d.name).sort()).toEqual(['Bob', 'Charlie']);
     });
 
     test('should find with $in operator', async () => {
-      const docs = await User.find({ _id: { $in: ['user1', 'user3'] } });
+      const docs = await User.findMany({ _id: { $in: ['user1', 'user3'] } });
       expect(docs).toHaveLength(2);
       expect(docs.map(d => d.name).sort()).toEqual(['Alice', 'Charlie']);
     });
 
     test('should find with $or operator', async () => {
-      const docs = await User.find({
+      const docs = await User.findMany({
         $or: [{ age: { $lt: 26 } }, { name: 'Charlie' }],
       });
       expect(docs).toHaveLength(2);
@@ -239,23 +239,23 @@ describe('typed-mongo Integration Tests', () => {
     });
 
     test('should support sort option', async () => {
-      const docs = await User.find({}, { sort: { age: -1 } });
+      const docs = await User.findMany({}, { sort: { age: -1 } });
       expect(docs.map(d => d.name)).toEqual(['Charlie', 'Bob', 'David', 'Alice']);
     });
 
     test('should support limit option', async () => {
-      const docs = await User.find({}, { limit: 2 });
+      const docs = await User.findMany({}, { limit: 2 });
       expect(docs).toHaveLength(2);
     });
 
     test('should support skip option', async () => {
-      const docs = await User.find({}, { sort: { _id: 1 }, skip: 2 });
+      const docs = await User.findMany({}, { sort: { _id: 1 }, skip: 2 });
       expect(docs).toHaveLength(2);
       expect(docs.map(d => d._id)).toEqual(['user3', 'user4']);
     });
   });
 
-  describe('findCursor', () => {
+  describe('find', () => {
     beforeEach(async () => {
       await User.insertMany([
         { _id: 'user1', name: 'Alice', age: 25 },
@@ -265,7 +265,7 @@ describe('typed-mongo Integration Tests', () => {
     });
 
     test('should return a cursor', async () => {
-      const cursor = User.findCursor({});
+      const cursor = User.find({});
       expect(cursor).toBeDefined();
       expect(cursor.toArray).toBeDefined();
 
@@ -274,7 +274,7 @@ describe('typed-mongo Integration Tests', () => {
     });
 
     test('should support cursor operations', async () => {
-      const cursor = User.findCursor({ age: { $gte: 30 } });
+      const cursor = User.find({ age: { $gte: 30 } });
       const count = await cursor.count();
       expect(count).toBe(2);
 
@@ -384,7 +384,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(result.matchedCount).toBe(2);
       expect(result.modifiedCount).toBe(2);
 
-      const users = await User.find({ tags: 'verified' });
+      const users = await User.findMany({ tags: 'verified' });
       expect(users).toHaveLength(2);
     });
 
@@ -394,7 +394,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(result.matchedCount).toBe(3);
       expect(result.modifiedCount).toBe(3);
 
-      const users = await User.find({});
+      const users = await User.findMany({});
       expect(users.map(u => u.age).sort()).toEqual([26, 31, 36]);
     });
 
@@ -409,7 +409,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(result.modifiedCount).toBe(2);
 
-      const updated = await User.find({ age: { $gte: 40 } });
+      const updated = await User.findMany({ age: { $gte: 40 } });
       expect(updated).toHaveLength(2);
       expect(updated[0]?.settings?.theme).toBe('dark');
     });
@@ -501,7 +501,7 @@ describe('typed-mongo Integration Tests', () => {
       const doc = await User.findOne({ _id: 'user2' });
       expect(doc).toBeNull();
 
-      const remaining = await User.find({});
+      const remaining = await User.findMany({});
       expect(remaining).toHaveLength(2);
     });
 
@@ -510,7 +510,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(result.deletedCount).toBe(1);
 
-      const remaining = await User.find({ age: { $gte: 30 } });
+      const remaining = await User.findMany({ age: { $gte: 30 } });
       expect(remaining).toHaveLength(1); // Only one deleted
     });
 
@@ -519,7 +519,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(result.deletedCount).toBe(0);
 
-      const all = await User.find({});
+      const all = await User.findMany({});
       expect(all).toHaveLength(3);
     });
   });
@@ -540,7 +540,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(result.acknowledged).toBe(true);
       expect(result.deletedCount).toBe(3);
 
-      const remaining = await User.find({});
+      const remaining = await User.findMany({});
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.name).toBe('Alice');
     });
@@ -550,7 +550,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(result.deletedCount).toBe(4);
 
-      const remaining = await User.find({});
+      const remaining = await User.findMany({});
       expect(remaining).toHaveLength(0);
     });
 
@@ -559,7 +559,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(result.deletedCount).toBe(0);
 
-      const all = await User.find({});
+      const all = await User.findMany({});
       expect(all).toHaveLength(4);
     });
   });
@@ -589,7 +589,7 @@ describe('typed-mongo Integration Tests', () => {
 
       expect(doc).toBeNull();
 
-      const all = await User.find({});
+      const all = await User.findMany({});
       expect(all).toHaveLength(3);
     });
 
@@ -614,7 +614,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(doc).toBeDefined();
       expect(doc?.name).toBe('Charlie'); // Highest age deleted first
 
-      const remaining = await User.find({ age: { $gte: 30 } });
+      const remaining = await User.findMany({ age: { $gte: 30 } });
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.name).toBe('Bob');
     });
@@ -1068,11 +1068,11 @@ describe('typed-mongo Integration Tests', () => {
       await User.insertMany(users);
 
       // Find with pagination
-      const page1 = await User.find({}, { limit: 10, sort: { _id: 1 } });
+      const page1 = await User.findMany({}, { limit: 10, sort: { _id: 1 } });
       expect(page1).toHaveLength(10);
       expect(page1[0]?._id).toBe('user00');
 
-      const page2 = await User.find({}, { limit: 10, skip: 10, sort: { _id: 1 } });
+      const page2 = await User.findMany({}, { limit: 10, skip: 10, sort: { _id: 1 } });
       expect(page2).toHaveLength(10);
       expect(page2[0]?._id).toBe('user10');
     });

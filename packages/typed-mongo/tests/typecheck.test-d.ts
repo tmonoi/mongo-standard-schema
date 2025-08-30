@@ -107,12 +107,12 @@ describe('Type checking tests', () => {
     const userResult = User.findOne({ name: 'John' });
     expectTypeOf(userResult).resolves.toMatchTypeOf<UserSchema | null>();
 
-    const usersResult = User.find({});
-    expectTypeOf(usersResult).resolves.toMatchTypeOf<UserSchema[]>();
-
-    const cursor = User.findCursor({});
+    const cursor = User.find({});
     expectTypeOf(cursor).toHaveProperty('toArray');
     expectTypeOf(cursor.toArray()).resolves.toMatchTypeOf<UserSchema[]>();
+
+    const usersResult = User.findMany({});
+    expectTypeOf(usersResult).resolves.toMatchTypeOf<UserSchema[]>();
   });
 
   test('Update operations - return types', () => {

@@ -77,22 +77,22 @@ export class Model<TSchema extends Document> {
   }
 
   /**
-   * Find multiple documents
+   * Find documents and return a cursor (MongoDB standard behavior)
    */
-  async find(
+  find(filter: PaprFilter<TSchema>, options?: FindOptions): FindCursor<WithId<TSchema>> {
+    return this.collection.find(filter as Filter<Document>, options) as FindCursor<WithId<TSchema>>;
+  }
+
+  /**
+   * Find multiple documents and return as array (convenience method)
+   */
+  async findMany(
     filter: PaprFilter<TSchema>,
     options?: FindOptions
   ): Promise<WithId<TSchema>[]> {
     const cursor = this.collection.find(filter as Filter<Document>, options);
     const results = await cursor.toArray();
     return results as WithId<TSchema>[];
-  }
-
-  /**
-   * Get a cursor for finding documents
-   */
-  findCursor(filter: PaprFilter<TSchema>, options?: FindOptions): FindCursor {
-    return this.collection.find(filter as Filter<Document>, options);
   }
 
   /**
