@@ -136,13 +136,9 @@ export class Model<TSchema extends Document> {
     const result = await this.collection.findOneAndUpdate(
       filter as Filter<Document>,
       update as UpdateFilter<TSchema>,
-      {
-        returnDocument: "after",
-        ...options,
-      }
+      options || {},
     );
-
-    return result as unknown as WithId<TSchema>;
+    return result;
   }
 
   /**
@@ -152,7 +148,7 @@ export class Model<TSchema extends Document> {
     filter: PaprFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    return this.collection.deleteOne(filter as Filter<Document>, options);
+    return this.collection.deleteOne(filter, options);
   }
 
   /**
