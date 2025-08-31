@@ -27,12 +27,14 @@ import type {
   PaprUpdateFilter,
   PaprMatchKeysAndValues,
   WithId,
+  ProjectionResult,
 } from "./types.js";
+import type { Projection, ProjectionType, BaseSchema } from "./utils.js";
 
 /**
  * Model class that provides type-safe MongoDB operations
  */
-export class Model<TSchema extends Document> {
+export class Model<TSchema extends BaseSchema> {
   private collection: Collection<TSchema>;
 
   constructor(db: Db, collectionName: string) {
@@ -69,30 +71,40 @@ export class Model<TSchema extends Document> {
   /**
    * Find a single document
    */
-  async findOne(
+  async findOne<TProjection extends Projection<TSchema> | undefined>(
     filter: PaprFilter<TSchema>,
-    options?: FindOptions
-  ): Promise<WithId<TSchema> | null> {
-    return this.collection.findOne(filter as Filter<Document>, options);
+    options?: FindOptions<TSchema> & { projection?: TProjection }
+  ): Promise<ProjectionType<TSchema, TProjection> | null> {
+    const result = await this.collection.findOne(
+      filter as Filter<Document>,
+      options
+    );
+    return result as unknown as ProjectionType<TSchema, TProjection>;
   }
 
   /**
    * Find documents and return a cursor (MongoDB standard behavior)
    */
-  find(filter: PaprFilter<TSchema>, options?: FindOptions): FindCursor<WithId<TSchema>> {
-    return this.collection.find(filter as Filter<Document>, options) as FindCursor<WithId<TSchema>>;
+  find<TProjection extends Projection<TSchema> | undefined>(
+    filter: PaprFilter<TSchema>,
+    options?: FindOptions<TSchema> & { projection?: TProjection }
+  ): FindCursor<ProjectionType<TSchema, TProjection>> {
+    return this.collection.find(
+      filter as Filter<Document>,
+      options
+    ) as unknown as FindCursor<ProjectionType<TSchema, TProjection>>;
   }
 
   /**
    * Find multiple documents and return as array (convenience method)
    */
-  async findMany(
+  async findMany<TProjection extends Projection<TSchema> | undefined>(
     filter: PaprFilter<TSchema>,
-    options?: FindOptions
-  ): Promise<WithId<TSchema>[]> {
+    options?: FindOptions<TSchema> & { projection?: TProjection }
+  ): Promise<ProjectionType<TSchema, TProjection>[]> {
     const cursor = this.collection.find(filter as Filter<Document>, options);
     const results = await cursor.toArray();
-    return results as WithId<TSchema>[];
+    return results as unknown as ProjectionType<TSchema, TProjection>[];
   }
 
   /**
@@ -136,7 +148,7 @@ export class Model<TSchema extends Document> {
     const result = await this.collection.findOneAndUpdate(
       filter as Filter<Document>,
       update as UpdateFilter<TSchema>,
-      options || {},
+      options || {}
     );
     return result;
   }
@@ -148,7 +160,7 @@ export class Model<TSchema extends Document> {
     filter: PaprFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    return this.collection.deleteOne(filter, options);
+    return this.collection.deleteOne(filter as Filter<Document>, options);
   }
 
   /**

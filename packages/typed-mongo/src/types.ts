@@ -23,9 +23,7 @@ import type {
   UpdateOneModel,
   WithId,
   ObjectId,
-} from 'mongodb';
-
-import type { NestedPaths, PropertyType } from './utils';
+} from "mongodb";
 
 // ============================================================================
 // Basic Types and Utilities
@@ -84,12 +82,94 @@ export type WithMongoId<T> = T extends (infer U)[]
 // Filter Types
 // ============================================================================
 
+// Forward declarations for types that will be defined in utils.ts
+export type NestedPaths<
+  Type,
+  Depth extends number[]
+> = Depth["length"] extends 6
+  ? []
+  : Type extends
+      | Buffer
+      | Date
+      | RegExp
+      | Uint8Array
+      | boolean
+      | number
+      | string
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      | ((...args: any[]) => any)
+      | {
+          _bsontype: string;
+        }
+  ? []
+  : Type extends readonly (infer ArrayType)[]
+  ? // This returns the non-indexed dot-notation path: e.g. `foo.bar`
+    | [...NestedPaths<ArrayType, [...Depth, 1]>]
+      // This returns the array parent itself: e.g. `foo`
+      | []
+      // This returns the indexed dot-notation path: e.g. `foo.0.bar`
+      | [number, ...NestedPaths<ArrayType, [...Depth, 1]>]
+      // This returns the indexed element path: e.g. `foo.0`
+      | [number]
+  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Type extends Map<string, any>
+  ? [string]
+  : Type extends object
+  ? {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [Key in Extract<keyof Type, string>]: Type[Key] extends readonly any[]
+        ? [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] // child is not structured the same as the parent
+        : [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] | [Key];
+    }[Extract<keyof Type, string>]
+  : [];
+
+export type PropertyNestedType<
+  Type,
+  Property extends string
+> = Property extends `${infer Key}.${infer Rest}`
+  ? Key extends `${number}`
+    ? // indexed array nested properties
+      NonNullable<Type> extends readonly (infer ArrayType)[]
+      ? PropertyType<ArrayType, Rest>
+      : unknown
+    : // object nested properties & non-indexed array nested properties
+    Key extends keyof Type
+    ? Type[Key] extends Map<string, infer MapType>
+      ? MapType
+      : PropertyType<NonNullable<Type[Key]>, Rest>
+    : unknown
+  : unknown;
+
+export type PropertyType<
+  Type,
+  Property extends string
+> = string extends Property
+  ? unknown
+  : // object properties
+  Property extends keyof Type
+  ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Type extends Record<string, any>
+    ? Property extends `${string}.${string}`
+      ? PropertyNestedType<NonNullable<Type>, Property>
+      : Type[Property]
+    : Type[Property]
+  : Type extends readonly (infer ArrayType)[]
+  ? // indexed array properties
+    Property extends `${number}`
+    ? ArrayType
+    : // non-indexed array properties
+    Property extends keyof ArrayType
+    ? PropertyType<ArrayType, Property>
+    : PropertyNestedType<NonNullable<Type>, Property>
+  : PropertyNestedType<NonNullable<Type>, Property>;
+
 export type PaprFilter<TSchema> =
   | Partial<WithId<TSchema>>
-  | (PaprFilterConditions<WithId<TSchema>> & PaprRootFilterOperators<WithId<TSchema>>);
+  | (PaprFilterConditions<WithId<TSchema>> &
+      PaprRootFilterOperators<WithId<TSchema>>);
 
 export type PaprFilterConditions<TSchema> = {
-  [Property in Join<NestedPaths<TSchema, []>, '.'>]?: PaprCondition<
+  [Property in Join<NestedPaths<TSchema, []>, ".">]?: PaprCondition<
     PropertyType<TSchema, Property>
   >;
 } & {
@@ -124,7 +204,9 @@ export interface PaprFilterOperators<TValue> {
   $lte?: TValue;
   $ne?: TValue;
   $nin?: readonly TValue[];
-  $not?: TValue extends string ? PaprFilterOperators<TValue> | RegExp : PaprFilterOperators<TValue>;
+  $not?: TValue extends string
+    ? PaprFilterOperators<TValue> | RegExp
+    : PaprFilterOperators<TValue>;
   $exists?: boolean;
   $type?: BSONType | BSONTypeAlias;
   $expr?: Record<string, any>;
@@ -181,16 +263,19 @@ export type PaprPullOperator<TSchema> = {
  * Custom PullAllOperator type that properly handles array fields
  */
 export type PaprPullAllOperator<TSchema> = {
-  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?: ArrayElement<
-    TSchema[K]
-  >[];
+  [K in keyof TSchema as TSchema[K] extends readonly any[]
+    ? K
+    : never]?: ArrayElement<TSchema[K]>[];
 };
 
 /**
  * Returns all dot-notation properties of a schema with their corresponding types.
  */
 export type PaprAllProperties<TSchema> = {
-  [Property in Join<NestedPaths<TSchema, []>, '.'>]?: PropertyType<TSchema, Property>;
+  [Property in Join<NestedPaths<TSchema, []>, ".">]?: PropertyType<
+    TSchema,
+    Property
+  >;
 } & {
   [K in keyof TSchema]?: TSchema[K];
 };
@@ -199,10 +284,14 @@ export type PaprAllProperties<TSchema> = {
  * Returns all array-specific element dot-notation properties
  */
 export type PaprArrayElementsProperties<TSchema> = {
-  [Property in `${Extract<KeysOfAType<PaprAllProperties<TSchema>, any[]>, string>}.$${
-    | ''
-    | `[${string}]`}`]?: ArrayElement<
-    PropertyType<TSchema, Property extends `${infer Key}.$${string}` ? Key : never>
+  [Property in `${Extract<
+    KeysOfAType<PaprAllProperties<TSchema>, any[]>,
+    string
+  >}.$${"" | `[${string}]`}`]?: ArrayElement<
+    PropertyType<
+      TSchema,
+      Property extends `${infer Key}.$${string}` ? Key : never
+    >
   >;
 };
 
@@ -210,9 +299,15 @@ export type PaprArrayElementsProperties<TSchema> = {
  * Returns all array-specific nested dot-notation properties
  */
 export type PaprArrayNestedProperties<TSchema> = {
-  [Property in `${Extract<KeysOfAType<PaprAllProperties<TSchema>, Record<string, any>[]>, string>}.$${
-    | ''
-    | `[${string}]`}.${string}`]?: PropertyType<TSchema, Property extends `${infer Base}.$${string}.${infer Rest}` ? `${Base}.0.${Rest}` : never>;
+  [Property in `${Extract<
+    KeysOfAType<PaprAllProperties<TSchema>, Record<string, any>[]>,
+    string
+  >}.$${"" | `[${string}]`}.${string}`]?: PropertyType<
+    TSchema,
+    Property extends `${infer Base}.$${string}.${infer Rest}`
+      ? `${Base}.0.${Rest}`
+      : never
+  >;
 };
 
 /**
@@ -231,7 +326,7 @@ export interface PaprUpdateFilter<TSchema> {
     Date | Timestamp,
     | true
     | {
-        $type: 'date' | 'timestamp';
+        $type: "date" | "timestamp";
       }
   >;
   $inc?: OnlyFieldsOfType<TSchema, NumericType | undefined>;
@@ -242,7 +337,7 @@ export interface PaprUpdateFilter<TSchema> {
   $set?: PaprMatchKeysAndValues<TSchema>;
   $setOnInsert?: PaprMatchKeysAndValues<TSchema>;
   $unset?: {
-    [K in keyof PaprMatchKeysAndValues<TSchema>]?: '' | 1 | true;
+    [K in keyof PaprMatchKeysAndValues<TSchema>]?: "" | 1 | true;
   };
   $addToSet?: SetFields<TSchema>;
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
@@ -274,18 +369,14 @@ export interface PaprUpdateFilter<TSchema> {
 export interface PaprProjectionOperators {
   $slice?: number | [number, number];
   $elemMatch?: Record<string, unknown>;
-  $meta?: 'textScore' | 'indexKey';
+  $meta?: "textScore" | "indexKey";
 }
 
 /**
  * MongoDB projection type
  */
 export type PaprProjection<TSchema> = {
-  [K in keyof WithId<TSchema>]?:
-    | 0
-    | 1
-    | boolean
-    | PaprProjectionOperators;
+  [K in keyof WithId<TSchema>]?: 0 | 1 | boolean | PaprProjectionOperators;
 } & {
   [key: string]: 0 | 1 | boolean | PaprProjectionOperators | undefined;
 } & {
@@ -295,16 +386,23 @@ export type PaprProjection<TSchema> = {
 /**
  * Result type after projection is applied
  */
-export type ProjectionResult<TSchema, TProjection> = TProjection extends Record<string, unknown>
-  ? {
-      [K in keyof WithId<TSchema>]: K extends keyof TProjection
-        ? TProjection[K] extends 0 | false
-          ? never
-          : WithId<TSchema>[K]
-        : TProjection extends Record<string, 1 | true>
-          ? never
-          : WithId<TSchema>[K];
-    }
+export type ProjectionResult<TSchema, TProjection> = TProjection extends Record<
+  string,
+  unknown
+>
+  ? TProjection extends Record<string, 1 | true>
+    ? {
+        [K in keyof TProjection as TProjection[K] extends 1 | true
+          ? K
+          : never]: K extends keyof WithId<TSchema>
+          ? WithId<TSchema>[K]
+          : never;
+      } & {
+        _id: WithId<TSchema>["_id"];
+      }
+    : TProjection extends Record<string, 0 | false>
+    ? Omit<WithId<TSchema>, keyof TProjection>
+    : WithId<TSchema>
   : WithId<TSchema>;
 
 // ============================================================================
@@ -393,7 +491,7 @@ export namespace StandardSchemaV1 {
  * Flatten nested object types for dot notation (legacy)
  */
 export type FlattenObject<T> = {
-  [K in Join<NestedPaths<T, []>, '.'>]: PropertyType<T, K>;
+  [K in Join<NestedPaths<T, []>, ".">]: PropertyType<T, K>;
 };
 
 /**
@@ -404,9 +502,8 @@ export type NestedPropertyType<T, P extends string> = PropertyType<T, P>;
 /**
  * Optional ID if ObjectId (legacy)
  */
-export type OptionalIdIfObjectId<TSchema> =
-  TSchema extends { _id: infer I }
-    ? I extends ObjectId
-      ? Omit<TSchema, '_id'> & { _id?: I }
-      : TSchema
-    : TSchema;
+export type OptionalIdIfObjectId<TSchema> = TSchema extends { _id: infer I }
+  ? I extends ObjectId
+    ? Omit<TSchema, "_id"> & { _id?: I }
+    : TSchema
+  : TSchema;
