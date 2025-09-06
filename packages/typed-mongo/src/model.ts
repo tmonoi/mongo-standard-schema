@@ -45,7 +45,7 @@ export class Model<TSchema extends BaseSchema> {
   async insertOne(
     doc: StrictOptionalId<TSchema>,
     options?: InsertOneOptions
-  ): Promise<InsertOneResult> {
+  ): Promise<InsertOneResult<TSchema>> {
     const result = await this.collection.insertOne(
       doc as unknown as OptionalUnlessRequiredId<TSchema>,
       options

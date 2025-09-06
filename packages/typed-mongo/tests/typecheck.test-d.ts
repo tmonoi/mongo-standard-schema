@@ -10,7 +10,7 @@ import { Client } from '../src/index.js';
 import type { Model } from '../src/model.js';
 
 // Test schema types
-interface UserSchema extends Document {
+type UserSchema = {
   _id: string;
   name: string;
   age: number;
@@ -32,7 +32,7 @@ interface UserSchema extends Document {
   counters?: Record<string, number>;
 }
 
-interface PostSchema extends Document {
+type PostSchema = {
   _id: ObjectId;
   title: string;
   content: string;
@@ -53,7 +53,7 @@ interface PostSchema extends Document {
   };
 }
 
-interface StrictSchema extends Document {
+type StrictSchema = {
   _id: string;
   required: string;
   optional?: string;
@@ -75,32 +75,39 @@ const Strict = client.model<StrictSchema>('strict');
 
 describe('Type checking tests', () => {
   test('Model type inference', () => {
-    expectTypeOf(User).toMatchTypeOf<Model<UserSchema>>();
-    expectTypeOf(Post).toMatchTypeOf<Model<PostSchema>>();
-    expectTypeOf(Strict).toMatchTypeOf<Model<StrictSchema>>();
+    expectTypeOf(User).toEqualTypeOf<Model<UserSchema>>();
+    expectTypeOf(Post).toEqualTypeOf<Model<PostSchema>>();
+    expectTypeOf(Strict).toEqualTypeOf<Model<StrictSchema>>();
   });
 
-  test('Insert operations - valid types', () => {
+  test('Insert operations - valid types', async () => {
     // Valid insertOne
-    const userResult = User.insertOne({
+    const userResult = await User.insertOne({
       _id: 'user1',
       name: 'John',
       age: 30,
     });
-    type UserInsertResult = Awaited<typeof userResult>;
-    expectTypeOf<UserInsertResult>().toHaveProperty('acknowledged');
-    expectTypeOf<UserInsertResult>().toHaveProperty('insertedId');
+    expectTypeOf(userResult).toEqualTypeOf<{
+      acknowledged: boolean;
+      insertedId: string;
+    }>();
 
     // Valid with optional fields
-    const userWithOptional = User.insertOne({
-      _id: 'user2',
-      name: 'Jane',
-      age: 25,
-      email: 'jane@example.com',
+    const postResult = await Post.insertOne({
+      title: 'Jane',
+      content: 'Jane',
+      authorId: 'user1',
       tags: ['user', 'admin'],
-      scores: [100, 200],
+      likes: 0,
+      comments: [],
+      published: false,
+      metadata: { views: 0, shares: 0 },
     });
-    expectTypeOf(userWithOptional).toMatchTypeOf<Promise<any>>();
+
+    expectTypeOf(postResult).toEqualTypeOf<{
+      acknowledged: boolean;
+      insertedId: ObjectId;
+    }>();
   });
 
   test('Find operations - return types', async () => {
