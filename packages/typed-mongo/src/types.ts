@@ -22,8 +22,11 @@ import type {
   UpdateManyModel,
   UpdateOneModel,
   WithId,
-  ObjectId,
 } from "mongodb";
+
+import { ObjectId } from "mongodb";
+
+import type { DeepPick } from "./DeepPick";
 
 // ============================================================================
 // Basic Types and Utilities
@@ -507,3 +510,50 @@ export type OptionalIdIfObjectId<TSchema> = TSchema extends { _id: infer I }
     ? Omit<TSchema, "_id"> & { _id?: I }
     : TSchema
   : TSchema;
+
+export interface BaseSchema {
+  _id: ObjectId | number | string;
+}
+
+export type Identity<Type> = Type;
+
+export type Flatten<Type extends object> = Identity<{
+  [Key in keyof Type]: Type[Key];
+}>;
+
+type FilterProperties<TObject, TValue> = Pick<
+  TObject,
+  KeysOfAType<TObject, TValue>
+>;
+
+export type ProjectionType<
+  TSchema extends BaseSchema,
+  Projection extends
+    | Partial<Record<Join<NestedPaths<WithId<TSchema>, []>, ".">, number>>
+    | undefined
+> = undefined extends Projection
+  ? WithId<TSchema>
+  : keyof FilterProperties<Projection, 0 | 1> extends never
+  ? WithId<DeepPick<TSchema, "_id" | (string & keyof Projection)>>
+  : keyof FilterProperties<Projection, 1> extends never
+  ? Omit<WithId<TSchema>, keyof FilterProperties<Projection, 0>>
+  : Omit<
+      WithId<DeepPick<TSchema, "_id" | (string & keyof Projection)>>,
+      keyof FilterProperties<Projection, 0>
+    >;
+
+export type Projection<TSchema> = Partial<
+  Record<Join<NestedPaths<WithId<TSchema>, []>, ".">, number>
+>;
+
+export type RequireAtLeastOne<TObj, Keys extends keyof TObj = keyof TObj> = {
+  [Key in Keys]-?: Partial<Pick<TObj, Exclude<Keys, Key>>> &
+    Required<Pick<TObj, Key>>;
+}[Keys] &
+  Pick<TObj, Exclude<keyof TObj, Keys>>;
+
+export function getIds(
+  ids: Set<string> | readonly (ObjectId | string)[]
+): ObjectId[] {
+  return [...ids].map((id) => new ObjectId(id));
+}

@@ -1,5 +1,6 @@
-import type { Db, MongoClient, Document } from 'mongodb';
+import type { Db, MongoClient } from 'mongodb';
 import { Model } from './model.js';
+import type { BaseSchema } from './types.js';
 
 /**
  * Main client class for safe-mongo
@@ -27,7 +28,7 @@ export class Client {
   /**
    * Create a model with schema and adapter
    */
-  model<TSchema extends Document>(
+  model<TSchema extends BaseSchema>(
     collectionName: string,
   ): Model<TSchema> {
     return new Model(this.db, collectionName);

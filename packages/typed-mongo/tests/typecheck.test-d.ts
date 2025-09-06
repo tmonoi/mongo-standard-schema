@@ -103,16 +103,24 @@ describe('Type checking tests', () => {
     expectTypeOf(userWithOptional).toMatchTypeOf<Promise<any>>();
   });
 
-  test('Find operations - return types', () => {
-    const userResult = User.findOne({ name: 'John' });
-    expectTypeOf(userResult).resolves.toMatchTypeOf<UserSchema | null>();
+  test('Find operations - return types', async () => {
+    const userResult = await User.findOne({ name: 'John' });
+    expectTypeOf(userResult).toMatchTypeOf<UserSchema | null>();
 
     const cursor = User.find({});
     expectTypeOf(cursor).toHaveProperty('toArray');
-    expectTypeOf(cursor.toArray()).resolves.toMatchTypeOf<UserSchema[]>();
+    const arrayResult = await cursor.toArray();
+    expectTypeOf(arrayResult).toMatchTypeOf<UserSchema[]>();
 
-    const usersResult = User.findMany({});
-    expectTypeOf(usersResult).resolves.toMatchTypeOf<UserSchema[]>();
+    const usersResult = await User.findMany({});
+    expectTypeOf(usersResult).toMatchTypeOf<UserSchema[]>();
+
+    // check projection
+    const projectedUserResult = await User.findOne({ name: 'John' }, { projection: { name: 1 } });
+    expectTypeOf(projectedUserResult).toMatchTypeOf<{
+      _id: string;
+      name: string;
+    } | null>();
   });
 
   test('Update operations - return types', () => {

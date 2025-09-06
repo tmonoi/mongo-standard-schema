@@ -15,7 +15,6 @@ import type {
   UpdateFilter,
   Document,
   Filter,
-  OptionalId,
   InsertManyResult,
   InsertOneResult,
   OptionalUnlessRequiredId,
@@ -23,13 +22,12 @@ import type {
 import type {
   StrictOptionalId,
   PaprFilter,
-  PaprProjection,
   PaprUpdateFilter,
-  PaprMatchKeysAndValues,
   WithId,
-  ProjectionResult,
+  Projection,
+  ProjectionType,
+  BaseSchema,
 } from "./types.js";
-import type { Projection, ProjectionType, BaseSchema } from "./utils.js";
 
 /**
  * Model class that provides type-safe MongoDB operations
