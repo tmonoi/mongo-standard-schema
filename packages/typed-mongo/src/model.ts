@@ -97,11 +97,11 @@ export class Model<TSchema extends BaseSchema> {
   async insertMany(
     docs: StrictOptionalId<TSchema>[],
     options?: BulkWriteOptions
-  ): Promise<InsertManyResult> {
+  ): Promise<InsertManyResult<TSchema>> {
     return this.collection.insertMany(
       docs as unknown as OptionalUnlessRequiredId<TSchema>[],
       options
-    ) as unknown as InsertManyResult;
+    );
   }
 
   /**

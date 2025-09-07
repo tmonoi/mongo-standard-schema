@@ -4,8 +4,7 @@
  */
 
 import { describe, test, expectTypeOf } from "vitest";
-import type { Document, ObjectId } from "mongodb";
-import { ObjectId as MongoObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 import { Client } from "../src/index.js";
 import type { Model } from "../src/model.js";
 
@@ -157,34 +156,93 @@ describe("Type checking tests", () => {
     });
   });
 
-  test("Insert operations - valid types", async () => {
-    // Valid insertOne
-    const userResult = await User.insertOne({
-      _id: "user1",
-      name: "John",
-      age: 30,
-    });
-    expectTypeOf(userResult).toEqualTypeOf<{
-      acknowledged: boolean;
-      insertedId: string;
-    }>();
+  describe("Insert operations", () => {
+    test("Check return types", async () => {
+      // Valid insertOne
+      const userResult = await User.insertOne({
+        _id: "user1",
+        name: "John",
+        age: 30,
+      });
+      expectTypeOf(userResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        insertedId: string;
+      }>();
 
-    // Valid with optional fields
-    const postResult = await Post.insertOne({
-      title: "Jane",
-      content: "Jane",
-      authorId: "user1",
-      tags: ["user", "admin"],
-      likes: 0,
-      comments: [],
-      published: false,
-      metadata: { views: 0, shares: 0 },
+      // Valid with optional fields
+      const postResult = await Post.insertOne({
+        title: "Jane",
+        content: "Jane",
+        authorId: "user1",
+        tags: ["user", "admin"],
+        likes: 0,
+        comments: [],
+        published: false,
+        metadata: { views: 0, shares: 0 },
+      });
+      expectTypeOf(postResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        insertedId: ObjectId;
+      }>();
+
+      // Valid with ObjectId _id
+      const postResult2 = await Post.insertOne({
+        _id: new ObjectId(),
+        title: "Jane",
+        content: "Jane",
+        authorId: "user1",
+        tags: ["user", "admin"],
+        likes: 0,
+        comments: [],
+        published: false,
+        metadata: { views: 0, shares: 0 },
+      });
+      expectTypeOf(postResult2).toEqualTypeOf<{
+        acknowledged: boolean;
+        insertedId: ObjectId;
+      }>();
+
+      const usersResult = await User.insertMany([
+        {
+          _id: "user1",
+          name: "John",
+          age: 30,
+        },
+        {
+          _id: "user2",
+          name: "Jane",
+          age: 30,
+        },
+      ]);
+      expectTypeOf(usersResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        insertedCount: number;
+        insertedIds: {
+          [key: number]: string;
+        };
+      }>();
     });
 
-    expectTypeOf(postResult).toEqualTypeOf<{
-      acknowledged: boolean;
-      insertedId: ObjectId;
-    }>();
+    test("Insert type errors", async () => {
+      // @ts-expect-error - _id is required if _id is not ObjectId
+      User.insertOne({
+        name: "John",
+        age: 30,
+      });
+
+      // @ts-expect-error - missing required field
+      User.insertOne({
+        _id: "user1",
+        name: "John",
+      });
+
+      User.insertOne({
+        _id: "user1",
+        name: "John",
+        // @ts-expect-error - wrong type for age
+        age: "thirty",
+      });
+    });
   });
 
   test("Update operations - return types", () => {
