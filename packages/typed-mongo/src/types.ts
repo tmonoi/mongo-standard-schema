@@ -352,27 +352,6 @@ export interface PaprUpdateFilter<TSchema> {
 // ============================================================================
 // Projection Types
 // ============================================================================
-
-/**
- * MongoDB projection operators
- */
-export interface PaprProjectionOperators {
-  $slice?: number | [number, number];
-  $elemMatch?: Record<string, unknown>;
-  $meta?: "textScore" | "indexKey";
-}
-
-/**
- * MongoDB projection type
- */
-export type PaprProjection<TSchema> = {
-  [K in keyof TSchema]?: 0 | 1 | boolean | PaprProjectionOperators;
-} & {
-  [key: string]: 0 | 1 | boolean | PaprProjectionOperators | undefined;
-} & {
-  _id?: 0 | 1 | boolean;
-};
-
 /**
  * Result type after projection is applied
  */
@@ -448,30 +427,6 @@ export type PaprBulkWriteOperation<TSchema> =
         document: StrictOptionalId<TSchema>;
       };
     };
-
-// ============================================================================
-// Standard Schema Types
-// ============================================================================
-
-/**
- * Standard Schema v1 interface
- * Based on: https://github.com/standard-schema/standard-schema
- */
-export interface StandardSchemaV1<Input = unknown, Output = Input> {
-  readonly "~standard": StandardSchemaV1.Properties<Input, Output>;
-}
-
-export namespace StandardSchemaV1 {
-  export interface Properties<Input = unknown, Output = Input> {
-    readonly version: 1;
-    readonly vendor: string;
-    readonly validate: (data: unknown) => data is Output;
-    readonly types: {
-      readonly input: Input;
-      readonly output: Output;
-    };
-  }
-}
 
 // ============================================================================
 // Legacy/Compatibility Types
