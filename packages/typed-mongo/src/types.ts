@@ -14,6 +14,7 @@ import type {
   KeysOfAType,
   NumericType,
   OnlyFieldsOfType,
+  PullAllOperator,
   PullOperator,
   PushOperator,
   SetFields,
@@ -240,11 +241,7 @@ export type PaprPullOperator<TSchema> = PullOperator<TSchema>;
 /**
  * Custom PullAllOperator type that properly handles array fields
  */
-export type PaprPullAllOperator<TSchema> = {
-  [K in keyof TSchema as TSchema[K] extends readonly any[]
-    ? K
-    : never]?: ArrayElement<TSchema[K]>[];
-};
+export type PaprPullAllOperator<TSchema> = PullAllOperator<TSchema>;
 
 /**
  * Returns all dot-notation properties of a schema with their corresponding types.
@@ -314,9 +311,7 @@ export interface PaprUpdateFilter<TSchema> {
   $rename?: Record<string, string>;
   $set?: PaprMatchKeysAndValues<TSchema>;
   $setOnInsert?: PaprMatchKeysAndValues<TSchema>;
-  $unset?: {
-    [K in keyof PaprMatchKeysAndValues<TSchema>]?: "" | 1 | true;
-  };
+  $unset?: OnlyFieldsOfType<TSchema, any, '' | 1 | true>;
   $addToSet?: SetFields<TSchema>;
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
   $pull?: PaprPullOperator<TSchema>;

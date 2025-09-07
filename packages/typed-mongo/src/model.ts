@@ -175,7 +175,7 @@ export class Model<TSchema extends BaseSchema> {
    */
   async findOneAndDelete<TProjection extends Projection<TSchema> | undefined>(
     filter: PaprFilter<TSchema>,
-    options?: FindOneAndDeleteOptions
+    options?: FindOneAndDeleteOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndDelete(
       filter as Filter<Document>,

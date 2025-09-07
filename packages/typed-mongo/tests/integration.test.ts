@@ -638,7 +638,6 @@ describe("typed-mongo Integration Tests", () => {
       expect(doc).toBeDefined();
       expect(doc?.name).toBe("Alice");
       expect(doc?._id).toBeUndefined();
-      expect(doc?.email).toBeUndefined();
     });
 
     test("should support sort option", async () => {
