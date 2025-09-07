@@ -14,6 +14,8 @@ import type {
   KeysOfAType,
   NumericType,
   OnlyFieldsOfType,
+  PullOperator,
+  PushOperator,
   SetFields,
   Timestamp,
 } from "mongodb";
@@ -228,26 +230,12 @@ export interface PaprFilterOperators<TValue> {
 /**
  * Custom PushOperator type that properly handles array fields
  */
-export type PaprPushOperator<TSchema> = {
-  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?:
-    | ArrayElement<TSchema[K]>
-    | {
-        $each?: ArrayElement<TSchema[K]>[];
-        $slice?: number;
-        $position?: number;
-        $sort?: 1 | -1 | Record<string, 1 | -1>;
-      };
-};
+export type PaprPushOperator<TSchema> = PushOperator<TSchema>;
 
 /**
  * Custom PullOperator type that properly handles array fields
  */
-export type PaprPullOperator<TSchema> = {
-  [K in keyof TSchema as TSchema[K] extends readonly any[] ? K : never]?:
-    | ArrayElement<TSchema[K]>
-    | Partial<ArrayElement<TSchema[K]>>
-    | PaprFilterOperators<ArrayElement<TSchema[K]>>;
-};
+export type PaprPullOperator<TSchema> = PullOperator<TSchema>;
 
 /**
  * Custom PullAllOperator type that properly handles array fields

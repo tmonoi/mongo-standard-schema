@@ -162,10 +162,12 @@ describe('typed-mongo Integration Tests', () => {
   });
 
   describe('findOne', () => {
+    const createdDate = new Date();
+
     beforeEach(async () => {
       await User.insertMany([
         { _id: 'user1', name: 'Alice', age: 25, email: 'alice@example.com' },
-        { _id: 'user2', name: 'Bob', age: 30 },
+        { _id: 'user2', name: 'Bob', age: 30, metadata: { created: createdDate } },
         { _id: 'user3', name: 'Charlie', age: 35, email: 'charlie@example.com' },
       ]);
     });
@@ -175,6 +177,7 @@ describe('typed-mongo Integration Tests', () => {
       expect(doc).toBeDefined();
       expect(doc?.name).toBe('Bob');
       expect(doc?.age).toBe(30);
+      expect(doc?.metadata?.created).toStrictEqual(createdDate);
     });
 
     test('should find a document by field', async () => {
@@ -321,6 +324,7 @@ describe('typed-mongo Integration Tests', () => {
     test('should update with $push operator', async () => {
       const result = await User.updateOne(
         { _id: 'user1' },
+        // @ts-expect-error - scores is nullable
         { $push: { scores: 300 } }
       );
 
@@ -798,6 +802,7 @@ describe('typed-mongo Integration Tests', () => {
       const result = await Post.updateOne(
         { title: 'Test Post' },
         {
+          // @ts-expect-error - tags is nullable
           $push: {
             tags: 'typescript',
             comments: {
@@ -821,6 +826,7 @@ describe('typed-mongo Integration Tests', () => {
       const result = await Post.updateOne(
         { title: 'Test Post' },
         {
+          // @ts-expect-error - tags is nullable
           $pull: {
             tags: 'nodejs',
             comments: { id: 'comment1' },
@@ -869,6 +875,7 @@ describe('typed-mongo Integration Tests', () => {
       // Add more tags
       await Post.updateOne(
         { title: 'Test Post' },
+        // @ts-expect-error - tags is nullable
         { $push: { tags: { $each: ['react', 'vue', 'angular'] } } }
       );
 

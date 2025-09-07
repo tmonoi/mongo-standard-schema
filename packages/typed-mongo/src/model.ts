@@ -111,7 +111,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema>,
     update: PaprUpdateFilter<TSchema>,
     options?: UpdateOptions
-  ): Promise<UpdateResult> {
+  ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateOne(
       filter as Filter<Document>,
       update as UpdateFilter<TSchema>,
@@ -126,7 +126,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema>,
     update: PaprUpdateFilter<TSchema>,
     options?: UpdateOptions
-  ): Promise<UpdateResult> {
+  ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateMany(
       filter as Filter<Document>,
       update as UpdateFilter<TSchema>,

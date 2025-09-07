@@ -17,6 +17,11 @@ export default defineConfig({
         '**/mockData.ts',
         'tests/**'
       ]
+    },
+    typecheck: {
+      enabled: true,
+      include: ['**/*.test-d.ts'],
+      tsconfig: './tsconfig.json',
     }
   },
   resolve: {

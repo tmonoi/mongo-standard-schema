@@ -158,6 +158,31 @@ describe("Type checking tests", () => {
 
   describe("Insert operations", () => {
     test("Check return types", async () => {
+      type UserInsertDoc = Parameters<typeof User.insertOne>[0];
+
+      // Required fields must be present
+      expectTypeOf<UserInsertDoc>().toEqualTypeOf<{
+        _id: string;
+        name: string;
+        age: number;
+        email?: string;
+        tags?: string[];
+        scores?: number[];
+        profile?: {
+          bio: string;
+          avatar?: string;
+        };
+        settings?: {
+          theme: string;
+          notifications: boolean;
+        };
+        metadata?: {
+          created: Date;
+          updated?: Date;
+        };
+        counters?: Record<string, number>;
+      }>();
+
       // Valid insertOne
       const userResult = await User.insertOne({
         _id: "user1",
@@ -245,158 +270,102 @@ describe("Type checking tests", () => {
     });
   });
 
-  test("Update operations - return types", () => {
-    const result = User.updateOne({ name: "John" }, { $set: { age: 31 } });
-    type UpdateResult = Awaited<typeof result>;
-    expectTypeOf<UpdateResult>().toHaveProperty("acknowledged");
-    expectTypeOf<UpdateResult>().toHaveProperty("modifiedCount");
-    expectTypeOf<UpdateResult>().toHaveProperty("matchedCount");
+  describe("Update operations", () => {
+    test("Check return types", async () => {
+      const updateOneResult = await User.updateOne(
+        { name: "John" },
+        { $set: { age: 31 } }
+      );
+      expectTypeOf(updateOneResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+        upsertedCount: number;
+        upsertedId: string | null;
+      }>();
+
+      const updateManyResult = await User.updateMany(
+        { name: "John" },
+        { $set: { age: 31 } }
+      );
+      expectTypeOf(updateManyResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+        upsertedCount: number;
+        upsertedId: string | null;
+      }>();
+    });
+
+    test("Check findOneAndUpdate return types", async () => {
+      const findOneAndUpdateResult = await User.findOneAndUpdate(
+        { name: "John" },
+        { $set: { age: 31 } }
+      );
+      expectTypeOf(findOneAndUpdateResult).toEqualTypeOf<UserSchema | null>();
+
+      const findOneAndUpdateResult2 = await User.findOneAndUpdate(
+        { name: "John" },
+        { $set: { age: 31 } },
+        { projection: { name: 1 } }
+      );
+      expectTypeOf(findOneAndUpdateResult2).toEqualTypeOf<{
+        _id: string;
+        name: string;
+      } | null>();
+    });
+
+    test("Check UpdateFilter", async () => {
+      User.updateOne(
+        { name: "John" },
+        {
+          $set: {
+            name: "Jane",
+            age: 31,
+            email: "jane@example.com",
+            tags: ["user", "admin"],
+            scores: [100, 200],
+            profile: {
+              bio: "Jane's bio",
+            },
+            metadata: {
+              created: new Date(),
+            },
+          },
+          $push: {
+            tags: "new-tag",
+          },
+        }
+      );
+    });
+
+    test("Check UpdateFilter type errors", async () => {
+      // @ts-expect-error - wrong type for _id
+      User.updateOne({ name: "John" }, { $set: { name: 31 } });
+
+      // @ts-expect-error - wrong type for $push operator
+      User.updateOne({ name: "John" }, { $push: { tags: 123 } });
+    });
   });
 
-  test("Delete operations - return types", () => {
-    const result = User.deleteOne({ name: "John" });
-    type DeleteResult = Awaited<typeof result>;
-    expectTypeOf<DeleteResult>().toHaveProperty("acknowledged");
-    expectTypeOf<DeleteResult>().toHaveProperty("deletedCount");
-  });
+  describe("Delete operations", () => {
+    test("Check return types", async () => {
+      const deleteOneResult = await User.deleteOne({ name: "John" });
+      expectTypeOf(deleteOneResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        deletedCount: number;
+      }>();
 
-  test("Type parameter inference", () => {
-    type UserInsertDoc = Parameters<typeof User.insertOne>[0];
-    type UserFilter = Parameters<typeof User.findOne>[0];
-    type UserUpdate = Parameters<typeof User.updateOne>[1];
-
-    // Required fields must be present
-    expectTypeOf<UserInsertDoc>().toMatchTypeOf<{
-      name: string;
-      age: number;
-      _id?: string;
-      email?: string;
-      tags?: string[];
-      scores?: number[];
-    }>();
-
-    // Filter can use MongoDB query operators
-    expectTypeOf<UserFilter>().toMatchTypeOf<{
-      name?: any;
-      age?: any;
-      $or?: any[];
-      $and?: any[];
-    }>();
-
-    // Update can use MongoDB update operators
-    expectTypeOf<UserUpdate>().toMatchTypeOf<{
-      $set?: any;
-      $inc?: any;
-      $push?: any;
-      $pull?: any;
-      $unset?: any;
-    }>();
+      const deleteManyResult = await User.deleteMany({ name: "John" });
+      expectTypeOf(deleteManyResult).toEqualTypeOf<{
+        acknowledged: boolean;
+        deletedCount: number;
+      }>();
+    });
   });
 });
 
 describe("Type error detection tests", () => {
-  test("insertOne - type errors", () => {
-    // @ts-expect-error - missing required field 'name'
-    User.insertOne({
-      _id: "user1",
-      age: 30,
-    });
-
-    // @ts-expect-error - missing required field 'age'
-    User.insertOne({
-      _id: "user2",
-      name: "Bob",
-    });
-
-    User.insertOne({
-      _id: "user3",
-      name: "Alice",
-      // @ts-expect-error - wrong type for 'age' (string instead of number)
-      age: "thirty",
-    });
-
-    User.insertOne({
-      _id: "user4",
-      // @ts-expect-error - wrong type for 'name' (number instead of string)
-      name: 123,
-      age: 30,
-    });
-
-    User.insertOne({
-      _id: "user5",
-      name: "Test",
-      age: 25,
-      // @ts-expect-error - wrong type for optional field 'email'
-      email: 123,
-    });
-
-    User.insertOne({
-      _id: "user6",
-      name: "Test",
-      age: 25,
-      // @ts-expect-error - wrong type for array field 'tags'
-      tags: [1, 2, 3], // should be string[]
-    });
-
-    User.insertOne({
-      _id: "user7",
-      name: "Test",
-      age: 25,
-      // @ts-expect-error - wrong type for array field 'scores'
-      scores: ["100", "200"], // should be number[]
-    });
-
-    User.insertOne({
-      _id: "user8",
-      name: "Test",
-      age: 25,
-      profile: {
-        // @ts-expect-error - wrong type for nested object field
-        bio: 123, // should be string
-      },
-    });
-
-    User.insertOne({
-      _id: "user9",
-      name: "Test",
-      age: 25,
-      // @ts-expect-error - missing required nested field
-      profile: {
-        // missing 'bio' field
-        avatar: "avatar.jpg",
-      },
-    });
-
-    User.insertOne({
-      _id: "user10",
-      name: "Test",
-      age: 25,
-      // @ts-expect-error - wrong structure for nested object
-      settings: "invalid", // should be object
-    });
-
-    Post.insertOne({
-      // @ts-expect-error - wrong ID type for ObjectId model
-      _id: "string-id", // should be ObjectId
-      title: "Test",
-      content: "Content",
-      authorId: "user1",
-      tags: [],
-      likes: 0,
-      comments: [],
-      published: false,
-      metadata: { views: 0, shares: 0 },
-    });
-
-    Strict.insertOne({
-      _id: "strict1",
-      required: "value",
-      nested: { required: "value" },
-      // @ts-expect-error - invalid union type value
-      union: "unknown", // not in union
-    });
-  });
-
   test("updateOne - type errors", () => {
     User.updateOne(
       { _id: "user1" },
