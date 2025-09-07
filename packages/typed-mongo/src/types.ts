@@ -27,13 +27,6 @@ import type {
 import { ObjectId } from "mongodb";
 
 import type { DeepPick } from "./DeepPick";
-
-// ============================================================================
-// Basic Types and Utilities
-// ============================================================================
-
-export type { WithId };
-
 // ============================================================================
 // Document Types
 // ============================================================================
@@ -529,21 +522,21 @@ type FilterProperties<TObject, TValue> = Pick<
 export type ProjectionType<
   TSchema extends BaseSchema,
   Projection extends
-    | Partial<Record<Join<NestedPaths<WithId<TSchema>, []>, ".">, number>>
+    | Partial<Record<Join<NestedPaths<TSchema, []>, ".">, number>>
     | undefined
 > = undefined extends Projection
-  ? WithId<TSchema>
+  ? TSchema
   : keyof FilterProperties<Projection, 0 | 1> extends never
-  ? WithId<DeepPick<TSchema, "_id" | (string & keyof Projection)>>
+  ? DeepPick<TSchema, "_id" | (string & keyof Projection)>
   : keyof FilterProperties<Projection, 1> extends never
-  ? Omit<WithId<TSchema>, keyof FilterProperties<Projection, 0>>
+  ? Omit<TSchema, keyof FilterProperties<Projection, 0>>
   : Omit<
-      WithId<DeepPick<TSchema, "_id" | (string & keyof Projection)>>,
+      DeepPick<TSchema, "_id" | (string & keyof Projection)>,
       keyof FilterProperties<Projection, 0>
     >;
 
 export type Projection<TSchema> = Partial<
-  Record<Join<NestedPaths<WithId<TSchema>, []>, ".">, number>
+  Record<Join<NestedPaths<TSchema, []>, ".">, number>
 >;
 
 export type RequireAtLeastOne<TObj, Keys extends keyof TObj = keyof TObj> = {

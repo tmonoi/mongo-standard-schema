@@ -23,7 +23,6 @@ import type {
   StrictOptionalId,
   PaprFilter,
   PaprUpdateFilter,
-  WithId,
   Projection,
   ProjectionType,
   BaseSchema,
@@ -37,33 +36,6 @@ export class Model<TSchema extends BaseSchema> {
 
   constructor(db: Db, collectionName: string) {
     this.collection = db.collection(collectionName);
-  }
-
-  /**
-   * Insert a single document
-   */
-  async insertOne(
-    doc: StrictOptionalId<TSchema>,
-    options?: InsertOneOptions
-  ): Promise<InsertOneResult<TSchema>> {
-    const result = await this.collection.insertOne(
-      doc as unknown as OptionalUnlessRequiredId<TSchema>,
-      options
-    );
-    return result;
-  }
-
-  /**
-   * Insert multiple documents
-   */
-  async insertMany(
-    docs: StrictOptionalId<TSchema>[],
-    options?: BulkWriteOptions
-  ): Promise<InsertManyResult> {
-    return this.collection.insertMany(
-      docs as unknown as OptionalUnlessRequiredId<TSchema>[],
-      options
-    ) as unknown as InsertManyResult;
   }
 
   /**
@@ -106,6 +78,33 @@ export class Model<TSchema extends BaseSchema> {
   }
 
   /**
+   * Insert a single document
+   */
+  async insertOne(
+    doc: StrictOptionalId<TSchema>,
+    options?: InsertOneOptions
+  ): Promise<InsertOneResult<TSchema>> {
+    const result = await this.collection.insertOne(
+      doc as unknown as OptionalUnlessRequiredId<TSchema>,
+      options
+    );
+    return result;
+  }
+
+  /**
+   * Insert multiple documents
+   */
+  async insertMany(
+    docs: StrictOptionalId<TSchema>[],
+    options?: BulkWriteOptions
+  ): Promise<InsertManyResult> {
+    return this.collection.insertMany(
+      docs as unknown as OptionalUnlessRequiredId<TSchema>[],
+      options
+    ) as unknown as InsertManyResult;
+  }
+
+  /**
    * Update a single document
    */
   async updateOne(
@@ -138,17 +137,17 @@ export class Model<TSchema extends BaseSchema> {
   /**
    * Find and update a single document
    */
-  async findOneAndUpdate(
+  async findOneAndUpdate<TProjection extends Projection<TSchema> | undefined>(
     filter: PaprFilter<TSchema>,
     update: PaprUpdateFilter<TSchema>,
-    options?: FindOneAndUpdateOptions
-  ): Promise<WithId<TSchema> | null> {
+    options?: FindOneAndUpdateOptions & { projection?: TProjection }
+  ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndUpdate(
       filter as Filter<Document>,
       update as UpdateFilter<TSchema>,
       options || {}
     );
-    return result;
+    return result as unknown as ProjectionType<TSchema, TProjection>;
   }
 
   /**
@@ -174,16 +173,16 @@ export class Model<TSchema extends BaseSchema> {
   /**
    * Find and delete a single document
    */
-  async findOneAndDelete(
+  async findOneAndDelete<TProjection extends Projection<TSchema> | undefined>(
     filter: PaprFilter<TSchema>,
     options?: FindOneAndDeleteOptions
-  ): Promise<WithId<TSchema> | null> {
+  ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndDelete(
       filter as Filter<Document>,
       options || {}
     );
 
-    return result as unknown as WithId<TSchema>;
+    return result as unknown as ProjectionType<TSchema, TProjection>;
   }
 
   /**
@@ -199,10 +198,10 @@ export class Model<TSchema extends BaseSchema> {
   /**
    * Get distinct values
    */
-  async distinct<K extends keyof WithId<TSchema>>(
+  async distinct<K extends keyof TSchema>(
     key: K,
     filter: PaprFilter<TSchema> = {}
-  ): Promise<WithId<TSchema>[K][]> {
+  ): Promise<TSchema[K][]> {
     return this.collection.distinct(key as string, filter as Filter<Document>);
   }
 }

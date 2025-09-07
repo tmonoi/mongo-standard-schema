@@ -3,11 +3,11 @@
  * This file is tested with: pnpm test --typecheck
  */
 
-import { describe, test, expectTypeOf } from 'vitest';
-import type { Document, ObjectId } from 'mongodb';
-import { ObjectId as MongoObjectId } from 'mongodb';
-import { Client } from '../src/index.js';
-import type { Model } from '../src/model.js';
+import { describe, test, expectTypeOf } from "vitest";
+import type { Document, ObjectId } from "mongodb";
+import { ObjectId as MongoObjectId } from "mongodb";
+import { Client } from "../src/index.js";
+import type { Model } from "../src/model.js";
 
 // Test schema types
 type UserSchema = {
@@ -30,7 +30,7 @@ type UserSchema = {
     updated?: Date;
   };
   counters?: Record<string, number>;
-}
+};
 
 type PostSchema = {
   _id: ObjectId;
@@ -51,7 +51,7 @@ type PostSchema = {
     views: number;
     shares: number;
   };
-}
+};
 
 type StrictSchema = {
   _id: string;
@@ -61,30 +61,107 @@ type StrictSchema = {
     required: string;
     optional?: string;
   };
-  union: 'active' | 'inactive' | 'pending';
-  unionOptional?: 'admin' | 'user' | 'guest';
-}
+  union: "active" | "inactive" | "pending";
+  unionOptional?: "admin" | "user" | "guest";
+};
 
 // Mock database for type testing
 declare const testDb: any;
 const client = Client.initialize(testDb);
 
-const User = client.model<UserSchema>('users');
-const Post = client.model<PostSchema>('posts');
-const Strict = client.model<StrictSchema>('strict');
+const User = client.model<UserSchema>("users");
+const Post = client.model<PostSchema>("posts");
+const Strict = client.model<StrictSchema>("strict");
 
-describe('Type checking tests', () => {
-  test('Model type inference', () => {
+describe("Type checking tests", () => {
+  test("Model type inference", () => {
     expectTypeOf(User).toEqualTypeOf<Model<UserSchema>>();
     expectTypeOf(Post).toEqualTypeOf<Model<PostSchema>>();
     expectTypeOf(Strict).toEqualTypeOf<Model<StrictSchema>>();
   });
 
-  test('Insert operations - valid types', async () => {
+  describe("Find operations", () => {
+    test("Check return types", async () => {
+      const userResult = await User.findOne({ name: "John" });
+      expectTypeOf(userResult).toEqualTypeOf<UserSchema | null>();
+
+      const cursor = User.find({});
+      expectTypeOf(cursor).toHaveProperty("toArray");
+      const arrayResult = await cursor.toArray();
+      expectTypeOf(arrayResult).toEqualTypeOf<UserSchema[]>();
+
+      const usersResult = await User.findMany({});
+      expectTypeOf(usersResult).toEqualTypeOf<UserSchema[]>();
+    });
+
+    test("Check projection", async () => {
+      const projectedUserResult = await User.findOne(
+        { name: "John" },
+        { projection: { name: 1 } }
+      );
+      expectTypeOf(projectedUserResult).toEqualTypeOf<{
+        _id: string;
+        name: string;
+      } | null>();
+
+      const projectedUsersResult = await User.findMany(
+        { name: "John" },
+        { projection: { _id: 1, name: 1 } }
+      );
+      expectTypeOf(projectedUsersResult).toEqualTypeOf<
+        {
+          _id: string;
+          name: string;
+        }[]
+      >();
+    });
+
+    test("Check filter", async () => {
+      const _ = await User.findOne({
+        name: "John",
+        age: {
+          $gt: 20,
+          $lt: 40,
+        },
+        email: "john@example.com",
+        tags: "user",
+        scores: { $in: [100, 200] },
+        "profile.bio": "John's bio",
+      });
+    });
+
+    test("Filter type errors", async () => {
+      // @ts-expect-error - non-existent field
+      User.findOne({ nonExistentField: "value" });
+
+      // @ts-expect-error - wrong type for 'name'
+      User.findOne({ name: 10 });
+
+      // @ts-expect-error - wrong type for 'age'
+      User.findOne({ age: "thirty" });
+
+      // @ts-expect-error - wrong type for 'email'
+      User.findOne({ email: 123 });
+
+      // @ts-expect-error - wrong type for 'tags'
+      User.findOne({ tags: 123 });
+
+      // @ts-expect-error - wrong type for 'scores'
+      User.findOne({ scores: "100" });
+
+      // @ts-expect-error - non-existent field
+      User.findOne({ "profile.nonExistentField": "" });
+
+      // @ts-expect-error - wrong type for 'profile.bio'
+      User.findOne({ "profile.bio": 123 });
+    });
+  });
+
+  test("Insert operations - valid types", async () => {
     // Valid insertOne
     const userResult = await User.insertOne({
-      _id: 'user1',
-      name: 'John',
+      _id: "user1",
+      name: "John",
       age: 30,
     });
     expectTypeOf(userResult).toEqualTypeOf<{
@@ -94,10 +171,10 @@ describe('Type checking tests', () => {
 
     // Valid with optional fields
     const postResult = await Post.insertOne({
-      title: 'Jane',
-      content: 'Jane',
-      authorId: 'user1',
-      tags: ['user', 'admin'],
+      title: "Jane",
+      content: "Jane",
+      authorId: "user1",
+      tags: ["user", "admin"],
       likes: 0,
       comments: [],
       published: false,
@@ -110,45 +187,22 @@ describe('Type checking tests', () => {
     }>();
   });
 
-  test('Find operations - return types', async () => {
-    const userResult = await User.findOne({ name: 'John' });
-    expectTypeOf(userResult).toMatchTypeOf<UserSchema | null>();
-
-    const cursor = User.find({});
-    expectTypeOf(cursor).toHaveProperty('toArray');
-    const arrayResult = await cursor.toArray();
-    expectTypeOf(arrayResult).toMatchTypeOf<UserSchema[]>();
-
-    const usersResult = await User.findMany({});
-    expectTypeOf(usersResult).toMatchTypeOf<UserSchema[]>();
-
-    // check projection
-    const projectedUserResult = await User.findOne({ name: 'John' }, { projection: { name: 1 } });
-    expectTypeOf(projectedUserResult).toMatchTypeOf<{
-      _id: string;
-      name: string;
-    } | null>();
-  });
-
-  test('Update operations - return types', () => {
-    const result = User.updateOne(
-      { name: 'John' },
-      { $set: { age: 31 } }
-    );
+  test("Update operations - return types", () => {
+    const result = User.updateOne({ name: "John" }, { $set: { age: 31 } });
     type UpdateResult = Awaited<typeof result>;
-    expectTypeOf<UpdateResult>().toHaveProperty('acknowledged');
-    expectTypeOf<UpdateResult>().toHaveProperty('modifiedCount');
-    expectTypeOf<UpdateResult>().toHaveProperty('matchedCount');
+    expectTypeOf<UpdateResult>().toHaveProperty("acknowledged");
+    expectTypeOf<UpdateResult>().toHaveProperty("modifiedCount");
+    expectTypeOf<UpdateResult>().toHaveProperty("matchedCount");
   });
 
-  test('Delete operations - return types', () => {
-    const result = User.deleteOne({ name: 'John' });
+  test("Delete operations - return types", () => {
+    const result = User.deleteOne({ name: "John" });
     type DeleteResult = Awaited<typeof result>;
-    expectTypeOf<DeleteResult>().toHaveProperty('acknowledged');
-    expectTypeOf<DeleteResult>().toHaveProperty('deletedCount');
+    expectTypeOf<DeleteResult>().toHaveProperty("acknowledged");
+    expectTypeOf<DeleteResult>().toHaveProperty("deletedCount");
   });
 
-  test('Type parameter inference', () => {
+  test("Type parameter inference", () => {
     type UserInsertDoc = Parameters<typeof User.insertOne>[0];
     type UserFilter = Parameters<typeof User.findOne>[0];
     type UserUpdate = Parameters<typeof User.updateOne>[1];
@@ -182,61 +236,61 @@ describe('Type checking tests', () => {
   });
 });
 
-describe('Type error detection tests', () => {
-  test('insertOne - type errors', () => {
+describe("Type error detection tests", () => {
+  test("insertOne - type errors", () => {
     // @ts-expect-error - missing required field 'name'
     User.insertOne({
-      _id: 'user1',
+      _id: "user1",
       age: 30,
     });
 
     // @ts-expect-error - missing required field 'age'
     User.insertOne({
-      _id: 'user2',
-      name: 'Bob',
+      _id: "user2",
+      name: "Bob",
     });
 
     User.insertOne({
-      _id: 'user3',
-      name: 'Alice',
+      _id: "user3",
+      name: "Alice",
       // @ts-expect-error - wrong type for 'age' (string instead of number)
-      age: 'thirty',
+      age: "thirty",
     });
 
     User.insertOne({
-      _id: 'user4',
+      _id: "user4",
       // @ts-expect-error - wrong type for 'name' (number instead of string)
       name: 123,
       age: 30,
     });
 
     User.insertOne({
-      _id: 'user5',
-      name: 'Test',
+      _id: "user5",
+      name: "Test",
       age: 25,
       // @ts-expect-error - wrong type for optional field 'email'
       email: 123,
     });
 
     User.insertOne({
-      _id: 'user6',
-      name: 'Test',
+      _id: "user6",
+      name: "Test",
       age: 25,
       // @ts-expect-error - wrong type for array field 'tags'
       tags: [1, 2, 3], // should be string[]
     });
 
     User.insertOne({
-      _id: 'user7',
-      name: 'Test',
+      _id: "user7",
+      name: "Test",
       age: 25,
       // @ts-expect-error - wrong type for array field 'scores'
-      scores: ['100', '200'], // should be number[]
+      scores: ["100", "200"], // should be number[]
     });
 
     User.insertOne({
-      _id: 'user8',
-      name: 'Test',
+      _id: "user8",
+      name: "Test",
       age: 25,
       profile: {
         // @ts-expect-error - wrong type for nested object field
@@ -245,30 +299,30 @@ describe('Type error detection tests', () => {
     });
 
     User.insertOne({
-      _id: 'user9',
-      name: 'Test',
+      _id: "user9",
+      name: "Test",
       age: 25,
       // @ts-expect-error - missing required nested field
       profile: {
         // missing 'bio' field
-        avatar: 'avatar.jpg',
+        avatar: "avatar.jpg",
       },
     });
 
     User.insertOne({
-      _id: 'user10',
-      name: 'Test',
+      _id: "user10",
+      name: "Test",
       age: 25,
       // @ts-expect-error - wrong structure for nested object
-      settings: 'invalid', // should be object
+      settings: "invalid", // should be object
     });
 
     Post.insertOne({
       // @ts-expect-error - wrong ID type for ObjectId model
-      _id: 'string-id', // should be ObjectId
-      title: 'Test',
-      content: 'Content',
-      authorId: 'user1',
+      _id: "string-id", // should be ObjectId
+      title: "Test",
+      content: "Content",
+      authorId: "user1",
       tags: [],
       likes: 0,
       comments: [],
@@ -277,19 +331,19 @@ describe('Type error detection tests', () => {
     });
 
     Strict.insertOne({
-      _id: 'strict1',
-      required: 'value',
-      nested: { required: 'value' },
+      _id: "strict1",
+      required: "value",
+      nested: { required: "value" },
       // @ts-expect-error - invalid union type value
-      union: 'unknown', // not in union
+      union: "unknown", // not in union
     });
   });
 
-  test('updateOne - type errors', () => {
+  test("updateOne - type errors", () => {
     User.updateOne(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type in $set operator
-      { $set: { age: 'thirty' } }
+      { $set: { age: "thirty" } }
     );
 
     // NOTE: These don't cause type errors due to MongoDB's flexible update operators
@@ -304,9 +358,9 @@ describe('Type error detection tests', () => {
     // );
 
     User.updateOne(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type in $inc operator
-      { $inc: { age: 'five' } }
+      { $inc: { age: "five" } }
     );
 
     // NOTE: These don't cause type errors due to MongoDB's flexible update operators
@@ -342,35 +396,35 @@ describe('Type error detection tests', () => {
     // );
 
     User.updateOne(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type for $mul operator
-      { $mul: { age: 'two' } }
+      { $mul: { age: "two" } }
     );
 
     User.updateOne(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type for $min operator
-      { $min: { age: 'twenty' } }
+      { $min: { age: "twenty" } }
     );
 
     User.updateOne(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type for $max operator
-      { $max: { age: 'thirty' } }
+      { $max: { age: "thirty" } }
     );
 
     // NOTE: Most MongoDB update operators accept 'any' type, so these don't cause errors
     // Commented out tests that don't produce type errors:
-    
+
     // User.updateOne({ _id: 'user1' }, { $currentDate: { nonExistent: true } });
-    
+
     User.updateOne(
-      { _id: 'user2' },
+      { _id: "user2" },
       // @ts-expect-error - wrong type in $setOnInsert
-      { $setOnInsert: { age: 'thirty' } },
+      { $setOnInsert: { age: "thirty" } },
       { upsert: true }
     );
-    
+
     // User.updateOne({ _id: 'user1' }, { $pullAll: { scores: ['not', 'numbers'] } });
     // User.updateOne({ _id: 'user1' }, { $set: { 'settings.notifications': 'yes' } });
     // User.updateOne({ _id: 'user1' }, { $set: { 'profile.nonExistent': 'value' } });
@@ -378,11 +432,11 @@ describe('Type error detection tests', () => {
     // User.updateOne({ _id: 'user1' }, { $set: { 'metadata.created': 'not-a-date' } });
   });
 
-  test('updateMany - type errors', () => {
+  test("updateMany - type errors", () => {
     User.updateMany(
       {},
       // @ts-expect-error - wrong type in $set operator
-      { $set: { age: 'invalid' } }
+      { $set: { age: "invalid" } }
     );
 
     // NOTE: MongoDB allows setting unknown fields
@@ -403,43 +457,11 @@ describe('Type error detection tests', () => {
     );
   });
 
-  test('find/findOne - filter type errors', () => {
-    // NOTE: MongoDB allows flexible filter types, so these don't cause errors
-    // User.findOne({ age: 'thirty' });
-    // User.findOne({ nonExistentField: 'value' });
-    // User.findOne({ 'profile.bio': 123 });
-    // Post.findOne({ _id: 'should-be-objectid' });
-    // User.find({ age: { $in: ['25', '30'] } });
-    // User.find({ age: { $gt: 'twenty' } });
-    // User.find({ name: { $regex: 123 } });
-    // User.find({ email: { $exists: 'yes' } }); // should be boolean
-    // User.find({ $or: [{ age: 'invalid' }] });
-    
-    // NOTE: $elemMatch doesn't provide strict type checking
-    // Post.find({
-    //   comments: {
-    //     $elemMatch: {
-    //       authorId: 123, // should be string
-    //     },
-    //   },
-    // });
-
-    Post.find({
-      // @ts-expect-error - wrong type for $size operator (should be number)
-      tags: { $size: 'two' },
-    });
-
-    // NOTE: $all operator doesn't provide strict type checking
-    // Post.find({
-    //   tags: { $all: [123, 456] }, // should be string[]
-    // });
-  });
-
-  test('findOneAndUpdate - type errors', () => {
+  test("findOneAndUpdate - type errors", () => {
     User.findOneAndUpdate(
-      { _id: 'user1' },
+      { _id: "user1" },
       // @ts-expect-error - wrong type in update
-      { $set: { age: 'invalid' } }
+      { $set: { age: "invalid" } }
     );
 
     // NOTE: MongoDB filters allow flexible types
@@ -452,7 +474,7 @@ describe('Type error detection tests', () => {
     // );
   });
 
-  test('deleteOne/deleteMany - filter type errors', () => {
+  test("deleteOne/deleteMany - filter type errors", () => {
     // NOTE: MongoDB filters allow flexible types
     // User.deleteOne({ age: 'thirty' });
     // User.deleteOne({ unknownField: 'value' });
@@ -460,25 +482,23 @@ describe('Type error detection tests', () => {
     // User.deleteMany({ nonExistent: true });
   });
 
-  test('distinct - type errors', () => {
+  test("distinct - type errors", () => {
     // NOTE: distinct accepts any field name as string
     // User.distinct('nonExistentField');
-    
     // NOTE: MongoDB filters allow flexible types
     // User.distinct('age', { name: 123 });
-
     // NOTE: MongoDB filters allow unknown fields
     // User.distinct('age', { unknownField: 'value' });
   });
 
-  test('countDocuments - type errors', () => {
+  test("countDocuments - type errors", () => {
     // NOTE: MongoDB filters allow flexible types
     // User.countDocuments({ age: 'thirty' });
     // User.countDocuments({ nonExistent: true });
     // User.countDocuments({ $or: [{ age: 'invalid' }] });
   });
 
-  test('options - type errors', () => {
+  test("options - type errors", () => {
     // NOTE: MongoDB options allow various types
     // User.find({}, { sort: { age: 'ascending' } }); // should be 1 or -1
     // User.find({}, { limit: 'ten' }); // should be number
@@ -487,54 +507,54 @@ describe('Type error detection tests', () => {
     // User.find({}, { invalidOption: true });
   });
 
-  test('complex nested operations - type errors', () => {
+  test("complex nested operations - type errors", () => {
     Strict.insertOne({
-      _id: 'strict3',
-      required: 'value',
+      _id: "strict3",
+      required: "value",
       nested: {
         // @ts-expect-error - wrong type for nested required field
         required: 123, // should be string
       },
-      union: 'active',
+      union: "active",
     });
 
     Strict.insertOne({
-      _id: 'strict4',
-      required: 'value',
+      _id: "strict4",
+      required: "value",
       // @ts-expect-error - missing nested required field
       nested: {
-        optional: 'value',
+        optional: "value",
         // missing 'required'
       },
-      union: 'active',
+      union: "active",
     });
 
     Strict.insertOne({
-      _id: 'strict5',
-      required: 'value',
+      _id: "strict5",
+      required: "value",
       // @ts-expect-error - wrong structure for nested object
-      nested: 'invalid', // should be object
-      union: 'active',
+      nested: "invalid", // should be object
+      union: "active",
     });
 
     User.insertOne({
-      _id: 'user11',
-      name: 'Test',
+      _id: "user11",
+      name: "Test",
       age: 25,
       counters: {
         // @ts-expect-error - wrong type for Record values
-        posts: 'ten', // should be number
+        posts: "ten", // should be number
         likes: 100,
       },
     });
 
     User.insertOne({
-      _id: 'user13',
-      name: 'Test',
+      _id: "user13",
+      name: "Test",
       age: 25,
       metadata: {
         // @ts-expect-error - wrong type for Date field
-        created: 'not-a-date', // should be Date
+        created: "not-a-date", // should be Date
       },
     });
 
@@ -552,7 +572,7 @@ describe('Type error detection tests', () => {
     // });
   });
 
-  test('mixed type errors in complex queries', () => {
+  test("mixed type errors in complex queries", () => {
     // NOTE: MongoDB filters allow flexible types
     // User.find({
     //   age: 'thirty', // MongoDB allows any type in filters
@@ -560,7 +580,6 @@ describe('Type error detection tests', () => {
     //   unknownField: 'value', // non-existent
     //   'profile.bio': 456, // wrong type for nested
     // });
-
     // NOTE: MongoDB filters and operators allow flexible types
     // User.updateMany(
     //   { age: 'invalid' },
@@ -578,13 +597,10 @@ describe('Type error detection tests', () => {
     //     },
     //   }
     // );
-
     // NOTE: MongoDB filters allow flexible types for _id
     // Post.updateOne({ _id: 'string-id' }, { $set: { title: 'Updated' } });
-
     // NOTE: MongoDB filters allow flexible types for _id
     // User.updateOne({ _id: new MongoObjectId() }, { $set: { name: 'Updated' } });
-
     // NOTE: MongoDB allows setting and unsetting the same field
     // User.updateOne(
     //   { _id: 'user1' },
@@ -595,23 +611,26 @@ describe('Type error detection tests', () => {
     // );
   });
 
-  test('insertMany - type errors', () => {
+  test("insertMany - type errors", () => {
     User.insertMany([
       // @ts-expect-error - missing required field 'age'
-      { _id: 'user1', name: 'Alice' },
+      { _id: "user1", name: "Alice" },
       // @ts-expect-error - missing required field 'name'
-      { _id: 'user2', age: 30 },
+      { _id: "user2", age: 30 },
     ]);
 
     User.insertMany([
-      { _id: 'user1', name: 'Alice', 
+      {
+        _id: "user1",
+        name: "Alice",
         // @ts-expect-error - wrong type for age
-        age: '25' 
+        age: "25",
       },
-      { _id: 'user2', 
+      {
+        _id: "user2",
         // @ts-expect-error - wrong type for name
-        name: 123, 
-        age: 30 
+        name: 123,
+        age: 30,
       },
     ]);
 
@@ -619,7 +638,7 @@ describe('Type error detection tests', () => {
     // User.insertMany('not-an-array'); // should be array
   });
 
-  test('comment array operations - type errors', () => {
+  test("comment array operations - type errors", () => {
     // NOTE: MongoDB's type system accepts any type for nested fields
     // Post.insertOne({
     //   _id: new MongoObjectId(),
@@ -639,7 +658,6 @@ describe('Type error detection tests', () => {
     //   published: false,
     //   metadata: { views: 0, shares: 0 },
     // });
-
     // NOTE: MongoDB's type system doesn't enforce required fields in nested arrays
     // Post.insertOne({
     //   _id: new MongoObjectId(),
@@ -659,7 +677,6 @@ describe('Type error detection tests', () => {
     //   published: false,
     //   metadata: { views: 0, shares: 0 },
     // });
-
     // NOTE: MongoDB's type system accepts any type for array fields
     // Post.insertOne({
     //   _id: new MongoObjectId(),

@@ -6,7 +6,6 @@ export { Model } from './model.js';
 export type {
   PaprUpdateFilter,
   PaprProjection,
-  WithId,
   StrictOptionalId,
   StandardSchemaV1,
 } from './types.js';
