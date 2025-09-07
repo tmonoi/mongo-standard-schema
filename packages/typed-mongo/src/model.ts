@@ -18,6 +18,7 @@ import type {
   InsertManyResult,
   InsertOneResult,
   OptionalUnlessRequiredId,
+  DistinctOptions,
 } from "mongodb";
 import type {
   StrictOptionalId,
@@ -35,7 +36,7 @@ export class Model<TSchema extends BaseSchema> {
   private collection: Collection<TSchema>;
 
   constructor(db: Db, collectionName: string) {
-    this.collection = db.collection(collectionName);
+    this.collection = db.collection<TSchema>(collectionName);
   }
 
   /**
@@ -46,7 +47,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOne(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       options
     );
     return result as unknown as ProjectionType<TSchema, TProjection>;
@@ -60,7 +61,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): FindCursor<ProjectionType<TSchema, TProjection>> {
     return this.collection.find(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       options
     ) as unknown as FindCursor<ProjectionType<TSchema, TProjection>>;
   }
@@ -72,7 +73,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema>,
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection>[]> {
-    const cursor = this.collection.find(filter as Filter<Document>, options);
+    const cursor = this.collection.find(filter as Filter<TSchema>, options);
     const results = await cursor.toArray();
     return results as unknown as ProjectionType<TSchema, TProjection>[];
   }
@@ -113,7 +114,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: UpdateOptions
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateOne(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
       options
     );
@@ -128,7 +129,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: UpdateOptions
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateMany(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
       options
     );
@@ -143,7 +144,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: FindOneAndUpdateOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndUpdate(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
       options || {}
     );
@@ -157,7 +158,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    return this.collection.deleteOne(filter as Filter<Document>, options);
+    return this.collection.deleteOne(filter as Filter<TSchema>, options);
   }
 
   /**
@@ -167,7 +168,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
-    return this.collection.deleteMany(filter as Filter<Document>, options);
+    return this.collection.deleteMany(filter as Filter<TSchema>, options);
   }
 
   /**
@@ -178,7 +179,7 @@ export class Model<TSchema extends BaseSchema> {
     options?: FindOneAndDeleteOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndDelete(
-      filter as Filter<Document>,
+      filter as Filter<TSchema>,
       options || {}
     );
 
@@ -192,7 +193,7 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema> = {},
     options?: CountDocumentsOptions
   ): Promise<number> {
-    return this.collection.countDocuments(filter as Filter<Document>, options);
+    return this.collection.countDocuments(filter as Filter<TSchema>, options);
   }
 
   /**
@@ -200,8 +201,9 @@ export class Model<TSchema extends BaseSchema> {
    */
   async distinct<K extends keyof TSchema>(
     key: K,
-    filter: PaprFilter<TSchema> = {}
+    filter: PaprFilter<TSchema> = {},
+    options?: DistinctOptions
   ): Promise<TSchema[K][]> {
-    return this.collection.distinct(key as string, filter as Filter<Document>);
+    return this.collection.distinct(key as string, filter as Filter<TSchema>, options || {});
   }
 }

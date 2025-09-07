@@ -413,4 +413,11 @@ describe("Type checking tests", () => {
       } | null>();
     });
   });
+
+  describe("countDocuments", () => {
+    test("Check countDocuments return types", async () => {
+      const countDocumentsResult = await User.countDocuments({ name: "John" });
+      expectTypeOf(countDocumentsResult).toEqualTypeOf<number>();
+    });
+  });
 });
