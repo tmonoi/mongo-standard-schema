@@ -316,7 +316,7 @@ describe("Type checking tests", () => {
     });
 
     test("Check UpdateFilter", async () => {
-      User.updateOne(
+      await User.updateOne(
         { name: "John" },
         {
           $set: {
@@ -334,6 +334,7 @@ describe("Type checking tests", () => {
           },
           $push: {
             tags: "new-tag",
+            scores: 300,
           },
         }
       );
