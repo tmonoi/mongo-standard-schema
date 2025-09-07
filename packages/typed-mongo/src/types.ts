@@ -8,20 +8,14 @@ import type {
   BSONRegExp,
   BSONType,
   BSONTypeAlias,
-  DeleteManyModel,
-  DeleteOneModel,
   Document,
   IntegerType,
   Join,
   KeysOfAType,
   NumericType,
   OnlyFieldsOfType,
-  ReplaceOneModel,
   SetFields,
   Timestamp,
-  UpdateManyModel,
-  UpdateOneModel,
-  WithId,
 } from "mongodb";
 
 import { ObjectId } from "mongodb";
@@ -160,9 +154,9 @@ export type PropertyType<
   : PropertyNestedType<NonNullable<Type>, Property>;
 
 export type PaprFilter<TSchema> =
-  | Partial<WithId<TSchema>>
-  | (PaprFilterConditions<WithId<TSchema>> &
-      PaprRootFilterOperators<WithId<TSchema>>);
+  | Partial<TSchema>
+  | (PaprFilterConditions<TSchema> &
+      PaprRootFilterOperators<TSchema>);
 
 export type PaprFilterConditions<TSchema> = {
   [Property in Join<NestedPaths<TSchema, []>, ".">]?: PaprCondition<
@@ -372,7 +366,7 @@ export interface PaprProjectionOperators {
  * MongoDB projection type
  */
 export type PaprProjection<TSchema> = {
-  [K in keyof WithId<TSchema>]?: 0 | 1 | boolean | PaprProjectionOperators;
+  [K in keyof TSchema]?: 0 | 1 | boolean | PaprProjectionOperators;
 } & {
   [key: string]: 0 | 1 | boolean | PaprProjectionOperators | undefined;
 } & {
@@ -382,7 +376,7 @@ export type PaprProjection<TSchema> = {
 /**
  * Result type after projection is applied
  */
-export type ProjectionResult<TSchema, TProjection> = TProjection extends Record<
+export type ProjectionResult<TSchema extends BaseSchema, TProjection> = TProjection extends Record<
   string,
   unknown
 >
@@ -390,16 +384,16 @@ export type ProjectionResult<TSchema, TProjection> = TProjection extends Record<
     ? {
         [K in keyof TProjection as TProjection[K] extends 1 | true
           ? K
-          : never]: K extends keyof WithId<TSchema>
-          ? WithId<TSchema>[K]
+          : never]: K extends keyof TSchema
+          ? TSchema[K]
           : never;
       } & {
-        _id: WithId<TSchema>["_id"];
+        _id: TSchema["_id"];
       }
     : TProjection extends Record<string, 0 | false>
-    ? Omit<WithId<TSchema>, keyof TProjection>
-    : WithId<TSchema>
-  : WithId<TSchema>;
+    ? Omit<TSchema, keyof TProjection>
+    : TSchema
+  : TSchema;
 
 // ============================================================================
 // Bulk Write Types
