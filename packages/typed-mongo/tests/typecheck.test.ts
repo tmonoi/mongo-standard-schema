@@ -6,6 +6,7 @@ import {
   beforeAll,
   afterAll,
   expect,
+  assertType,
 } from "vitest";
 import { type BulkWriteResult, ObjectId } from "mongodb";
 import { Client } from "../src/index.js";
@@ -83,74 +84,53 @@ describe("Type checking tests", () => {
     Post = client.model<PostSchema>("posts");
   });
 
-  describe("Find operations", () => {
+  const testUser1 = {
+    _id: "user1",
+    name: "John",
+    age: 30,
+    profile: { bio: "John's bio" },
+    settings: { theme: "light", notifications: true },
+    metadata: { created: new Date() },
+  };
+  const testUser2 = {
+    _id: "user2",
+    name: "Jane",
+    age: 25,
+  };
+  const testPost1 = {
+    _id: new ObjectId(),
+    title: "Post 1",
+    content: "Post 1 content",
+    authorId: "user1",
+    tags: ["tag1", "tag2"],
+    likes: 0,
+    comments: [],
+    published: false,
+    metadata: { views: 0, shares: 0 },
+  };
+  const testPost2 = {
+    title: "Post 2",
+    content: "Post 2 content",
+    authorId: "user1",
+    tags: ["tag1", "tag2"],
+    likes: 0,
+    comments: [],
+    published: false,
+    metadata: { views: 0, shares: 0 },
+  };
+
+
+  describe("findOne", () => {
     beforeAll(async () => {
       await User.deleteMany({});
-      await Post.deleteMany({});
-
-      await User.insertMany([
-        {
-          _id: "user1",
-          name: "John",
-          age: 30,
-          profile: { bio: "John's bio" },
-          settings: { theme: "light", notifications: true },
-          metadata: { created: new Date() },
-        },
-        { _id: "user2", name: "Jane", age: 25 },
-      ]);
-      await Post.insertMany([
-        {
-          title: "Post 1",
-          content: "Post 1",
-          authorId: "user1",
-          tags: ["tag1"],
-          metadata: { views: 100, shares: 10 },
-          likes: 10,
-          comments: [
-            {
-              id: "comment1",
-              text: "Comment 1",
-              authorId: "user1",
-              createdAt: new Date(),
-            },
-          ],
-          published: true,
-          publishedAt: new Date(),
-        },
-        {
-          title: "Post 2",
-          content: "Post 2",
-          authorId: "user2",
-          tags: ["tag2"],
-          metadata: { views: 200, shares: 20 },
-          likes: 20,
-          comments: [
-            {
-              id: "comment2",
-              text: "Comment 2",
-              authorId: "user2",
-              createdAt: new Date(),
-            },
-          ],
-          published: true,
-          publishedAt: new Date(),
-        },
-      ]);
+      await User.insertMany([testUser1, testUser2]);
     });
 
     test("the findOne data type should match the schema-inferred type", async () => {
       const user = await User.findOne({ name: "John" });
-      expect(user).not.toBeNull();
-      if (!user) return;
-      expect(userSchema.safeParse(user).success).toBe(true);
-      expectTypeOf(user).toEqualTypeOf<z.infer<typeof userSchema>>();
-
-      const post = await Post.findOne({ title: "Post 1" });
-      expect(post).not.toBeNull();
-      if (!post) return;
-      expect(postSchema.safeParse(post).success).toBe(true);
-      expectTypeOf(post).toEqualTypeOf<z.infer<typeof postSchema>>();
+      expect(userSchema.safeParse(user).success).toBeTruthy();
+      expect(user).toEqual(testUser1);
+      assertType<z.infer<typeof userSchema> | null>(user);
     });
 
     test("the findOne projection data type should match the schema-inferred type", async () => {
@@ -163,14 +143,65 @@ describe("Type checking tests", () => {
         { name: "John" },
         { projection: { name: 1 } }
       );
-      expect(projectedUserResult).not.toBeNull();
-      if (!projectedUserResult) return;
-      expect(projectedUserSchema.safeParse(projectedUserResult).success).toBe(
-        true
-      );
-      expectTypeOf(projectedUserResult).toEqualTypeOf<
-        z.infer<typeof projectedUserSchema>
-      >();
+      expect(projectedUserSchema.safeParse(projectedUserResult).success).toBeTruthy();
+      expect(projectedUserResult).toEqual({
+        _id: "user1",
+        name: "John",
+      });
+      assertType<z.infer<typeof projectedUserSchema> | null>(projectedUserResult);
+    });
+  });
+
+  describe("findMany", () => {
+    beforeAll(async () => {
+      await User.deleteMany({});
+      await User.insertMany([testUser1, testUser2]);
+    });
+
+    test("the findMany data type should match the schema-inferred type", async () => {
+      const users = await User.findMany({});
+      for (const user of users) {
+        expect(userSchema.safeParse(user).success).toBeTruthy();
+      }
+      expect(users).toEqual([testUser1, testUser2]);
+      assertType<z.infer<typeof userSchema>[]>(users);
+    });
+  });
+
+  describe("insertOne", () => {
+    beforeEach(async () => {
+      await User.deleteMany({});
+      await Post.deleteMany({});
+    });
+
+    test("the insertOne data type should match the schema-inferred type", async () => {
+      const result = await User.insertOne(testUser1);
+
+      expect(result).toEqual({
+        acknowledged: true,
+        insertedId: testUser1._id,
+      });
+      assertType<{
+        acknowledged: boolean;
+        insertedId: string;
+      }>(result);
+    });
+
+    test("the insertOne data type should match the schema-inferred type with ObjectId", async () => {
+      const result = await Post.insertOne(testPost1);
+      expect(result).toEqual({
+        acknowledged: true,
+        insertedId: testPost1._id,
+      });
+      assertType<{
+        acknowledged: boolean;
+        insertedId: ObjectId;
+      }>(result);
+    });
+
+    test("the insertOne data type should match the schema-inferred type with ObjectId", async () => {
+      const result = await Post.insertOne(testPost2);
+      expect(result.insertedId).toBeInstanceOf(ObjectId);
     });
   });
 });
