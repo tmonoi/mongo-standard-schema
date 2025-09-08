@@ -2,7 +2,6 @@
  * Type-only tests for typed-mongo
  * This file is tested with: pnpm test --typecheck
  */
-
 import { describe, test, expectTypeOf } from "vitest";
 import { type BulkWriteResult, ObjectId } from "mongodb";
 import { Client } from "../src/index.js";

@@ -65,9 +65,6 @@ importers:
       '@biomejs/biome':
         specifier: ^1.4.1
         version: 1.9.4
-      '@safe-mongo/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.9

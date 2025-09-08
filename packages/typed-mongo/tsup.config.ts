@@ -1,11 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/**/*.ts'],
+  entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
-  dts: false, // Disable DTS generation in tsup
+  dts: true,
   clean: true,
-  sourcemap: true,
+  sourcemap: false,
   splitting: false,
-  bundle: false,
+  bundle: true,
 });
