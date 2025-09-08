@@ -81,7 +81,7 @@ describe("Type checking tests", () => {
     test("Check projection", async () => {
       const projectedUserResult = await User.findOne(
         { name: "John" },
-        { projection: { name: 1, profile: 1 } }
+        { projection: { name: 1, profile: 1, "settings.notifications": 1 } }
       );
       expectTypeOf(projectedUserResult).toEqualTypeOf<{
         _id: string;
@@ -89,6 +89,9 @@ describe("Type checking tests", () => {
         profile?: {
           bio: string;
           avatar?: string;
+        };
+        settings?: {
+          notifications: boolean;
         };
       } | null>();
 
