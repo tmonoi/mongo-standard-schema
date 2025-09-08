@@ -3,6 +3,7 @@ import type { ObjectId, Document } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import { Client } from "../src/index.js";
 import type { Model } from "../src/model.js";
+import { testDbManager } from "./setup/mongodb-memory-server.js";
 
 // Test schema types
 type UserSchema = {
@@ -54,8 +55,7 @@ describe("typed-mongo Integration Tests", () => {
   let Post: Model<PostSchema>;
 
   beforeEach(async () => {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    const testDb = (globalThis as any).testDb;
+    const testDb = testDbManager.getDb();
     client = Client.initialize(testDb);
 
     // Clear collections before each test
@@ -1129,8 +1129,7 @@ describe("typed-mongo Integration Tests", () => {
     });
 
     test("should close connection", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      const testDb = (globalThis as any).testDb;
+      const testDb = testDbManager.getDb();
       const testClient = Client.initialize(testDb);
 
       // Verify it works

@@ -2,36 +2,81 @@ import { type Db, MongoClient } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { afterAll, beforeAll } from 'vitest';
 
-let mongod: MongoMemoryServer;
-let mongoClient: MongoClient;
-let db: Db;
+class TestDBManager {
+  private static instance: TestDBManager;
+  
+  private mongod?: MongoMemoryServer;
+  private client?: MongoClient;
+  public db?: Db;
+  private uri?: string;
 
+  // privateコンストラクタで外部からのnewを防ぐ
+  private constructor() {}
+
+  // インスタンスを取得するためのstaticメソッド
+  public static getInstance(): TestDBManager {
+    if (!TestDBManager.instance) {
+      TestDBManager.instance = new TestDBManager();
+    }
+    return TestDBManager.instance;
+  }
+
+  public async start(): Promise<{ client: MongoClient; db: Db; uri: string }> {
+    // 既に起動済みの場合は既存のインスタンスを返す
+    if (this.client && this.db && this.uri) {
+      return { client: this.client, db: this.db, uri: this.uri };
+    }
+
+    this.mongod = await MongoMemoryServer.create();
+    this.uri = this.mongod.getUri();
+    this.client = new MongoClient(this.uri);
+    await this.client.connect();
+    this.db = this.client.db('test');
+
+    return { client: this.client, db: this.db, uri: this.uri };
+  }
+
+  public async stop(): Promise<void> {
+    await this.client?.close();
+    await this.mongod?.stop();
+    this.client = undefined;
+    this.db = undefined;
+    this.mongod = undefined;
+    this.uri = undefined;
+  }
+
+  public getDb(): Db {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call start() first.');
+    }
+    return this.db;
+  }
+
+  public getClient(): MongoClient {
+    if (!this.client) {
+      throw new Error('Client not initialized. Call start() first.');
+    }
+    return this.client;
+  }
+}
+
+// シングルトンインスタンスをエクスポート
+export const testDbManager = TestDBManager.getInstance();
+
+// 後方互換性のために既存の関数もエクスポート
 export const startTestDb = async (): Promise<{ client: MongoClient; db: Db; uri: string }> => {
-  mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
-  mongoClient = new MongoClient(uri);
-  await mongoClient.connect();
-  db = mongoClient.db('test');
-  return { client: mongoClient, db, uri };
+  return testDbManager.start();
 };
 
 export const stopTestDb = async (): Promise<void> => {
-  if (mongoClient) {
-    await mongoClient.close();
-  }
-  if (mongod) {
-    await mongod.stop();
-  }
+  return testDbManager.stop();
 };
 
 // Global setup for all tests
 beforeAll(async () => {
-  const testDb = await startTestDb();
-  // Make db available globally for tests
-  (globalThis as any).testDb = testDb.db;
-  (globalThis as any).testClient = testDb.client;
+  await testDbManager.start();
 });
 
 afterAll(async () => {
-  await stopTestDb();
+  await testDbManager.stop();
 });
