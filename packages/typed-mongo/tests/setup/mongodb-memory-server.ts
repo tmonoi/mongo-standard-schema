@@ -63,15 +63,6 @@ class TestDBManager {
 // シングルトンインスタンスをエクスポート
 export const testDbManager = TestDBManager.getInstance();
 
-// 後方互換性のために既存の関数もエクスポート
-export const startTestDb = async (): Promise<{ client: MongoClient; db: Db; uri: string }> => {
-  return testDbManager.start();
-};
-
-export const stopTestDb = async (): Promise<void> => {
-  return testDbManager.stop();
-};
-
 // Global setup for all tests
 beforeAll(async () => {
   await testDbManager.start();
