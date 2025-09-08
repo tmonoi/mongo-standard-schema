@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expectTypeOf } from "vitest";
-import { ObjectId } from "mongodb";
+import { type BulkWriteResult, ObjectId } from "mongodb";
 import { Client } from "../src/index.js";
 import type { Model } from "../src/model.js";
 
@@ -414,10 +414,77 @@ describe("Type checking tests", () => {
     });
   });
 
-  describe("countDocuments", () => {
+  describe("Bulk write operations", () => {
+    test("Check aggregate return types", async () => {
+      const aggregateResult = await User.bulkWrite([
+        {
+          updateOne: {
+            filter: { name: "John" },
+            update: { $set: { age: 31 } },
+          },
+        },
+        {
+          updateMany: {
+            filter: { name: "John" },
+            update: { $set: { age: 31 } },
+          },
+        },
+        {
+          deleteOne: {
+            filter: { name: "John" },
+          },
+        },
+        
+        {
+          deleteMany: {
+            filter: { name: "John" },
+          },
+        },
+        
+        {
+          replaceOne: {
+            filter: { name: "John" },
+            replacement: { name: "John", age: 31 },
+          },
+        },
+      ]);
+      expectTypeOf(aggregateResult).toEqualTypeOf<BulkWriteResult>();
+    });
+  });
+
+  describe("Count Documents operations", () => {
     test("Check countDocuments return types", async () => {
       const countDocumentsResult = await User.countDocuments({ name: "John" });
       expectTypeOf(countDocumentsResult).toEqualTypeOf<number>();
+    });
+  });
+
+  describe("Estimated Document Count operations", () => {
+    test("Check estimatedDocumentCount return types", async () => {
+      const estimatedDocumentCountResult = await User.estimatedDocumentCount();
+      expectTypeOf(estimatedDocumentCountResult).toEqualTypeOf<number>();
+    });
+  });
+  
+  describe("Distinct operations", () => {
+    test("Check distinct return types", async () => {
+      const distinctResult = await User.distinct("name");
+      expectTypeOf(distinctResult).toEqualTypeOf<string[]>();
+    });
+  });
+
+  describe("Aggregate operations", () => {
+    test("Check aggregate return types", async () => {
+      const aggregateResult = await User.aggregate<UserSchema>([{ $match: { name: "John" } }]).toArray();
+      expectTypeOf(aggregateResult).toEqualTypeOf<UserSchema[]>();
+
+      const aggregateResult2 = await User.aggregate<{ _id: string; count: number }>([
+        { $group: { _id: "$name", count: { $sum: 1 } } },
+        { $limit: 10 },
+        { $skip: 0 },
+        { $sort: { count: -1 } },
+      ]).toArray();
+      expectTypeOf(aggregateResult2).toEqualTypeOf<{ _id: string; count: number }[]>();
     });
   });
 });

@@ -8,6 +8,8 @@ import type {
   BSONRegExp,
   BSONType,
   BSONTypeAlias,
+  DeleteManyModel,
+  DeleteOneModel,
   Document,
   IntegerType,
   Join,
@@ -17,8 +19,11 @@ import type {
   PullAllOperator,
   PullOperator,
   PushOperator,
+  ReplaceOneModel,
   SetFields,
   Timestamp,
+  UpdateManyModel,
+  UpdateOneModel,
 } from "mongodb";
 
 import { ObjectId } from "mongodb";
@@ -360,49 +365,26 @@ export type ProjectionResult<TSchema extends BaseSchema, TProjection> = TProject
 // ============================================================================
 // Bulk Write Types
 // ============================================================================
-
-export type PaprBulkWriteOperation<TSchema> =
+export type PaprBulkWriteOperation<TSchema extends BaseSchema> =
   | {
-      deleteMany: {
-        filter: PaprFilter<TSchema>;
-        collation?: any;
-        hint?: any;
-      };
+      deleteMany: Omit<DeleteManyModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
     }
   | {
-      deleteOne: {
-        filter: PaprFilter<TSchema>;
-        collation?: any;
-        hint?: any;
-      };
+      deleteOne: Omit<DeleteOneModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
     }
   | {
-      replaceOne: {
-        filter: PaprFilter<TSchema>;
-        replacement: TSchema;
-        upsert?: boolean;
-        collation?: any;
-        hint?: any;
-      };
+      replaceOne: Omit<ReplaceOneModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
     }
   | {
-      updateMany: {
+      updateMany: Omit<UpdateManyModel<TSchema>, 'filter' | 'update'> & {
         filter: PaprFilter<TSchema>;
         update: PaprUpdateFilter<TSchema>;
-        upsert?: boolean;
-        collation?: any;
-        arrayFilters?: any[];
-        hint?: any;
       };
     }
   | {
-      updateOne: {
+      updateOne: Omit<UpdateOneModel<TSchema>, 'filter' | 'update'> & {
         filter: PaprFilter<TSchema>;
         update: PaprUpdateFilter<TSchema>;
-        upsert?: boolean;
-        collation?: any;
-        arrayFilters?: any[];
-        hint?: any;
       };
     }
   | {

@@ -19,6 +19,11 @@ import type {
   InsertOneResult,
   OptionalUnlessRequiredId,
   DistinctOptions,
+  EstimatedDocumentCountOptions,
+  BulkWriteResult,
+  AnyBulkWriteOperation,
+  AggregateOptions,
+  AggregationCursor,
 } from "mongodb";
 import type {
   StrictOptionalId,
@@ -27,6 +32,7 @@ import type {
   Projection,
   ProjectionType,
   BaseSchema,
+  PaprBulkWriteOperation,
 } from "./types.js";
 
 /**
@@ -187,6 +193,16 @@ export class Model<TSchema extends BaseSchema> {
   }
 
   /**
+   * Bulk write
+   */
+  async bulkWrite(
+    operations: readonly PaprBulkWriteOperation<TSchema>[],
+    options?: BulkWriteOptions
+  ): Promise<BulkWriteResult> {
+    return this.collection.bulkWrite(operations as AnyBulkWriteOperation<TSchema>[], options);
+  }
+
+  /**
    * Count documents
    */
   async countDocuments(
@@ -197,6 +213,15 @@ export class Model<TSchema extends BaseSchema> {
   }
 
   /**
+   * Estimated document count
+   */
+  async estimatedDocumentCount(
+    options?: EstimatedDocumentCountOptions
+  ): Promise<number> {
+    return this.collection.estimatedDocumentCount(options);
+  }
+
+  /**
    * Get distinct values
    */
   async distinct<K extends keyof TSchema>(
@@ -204,6 +229,20 @@ export class Model<TSchema extends BaseSchema> {
     filter: PaprFilter<TSchema> = {},
     options?: DistinctOptions
   ): Promise<TSchema[K][]> {
-    return this.collection.distinct(key as string, filter as Filter<TSchema>, options || {});
+    return this.collection.distinct(
+      key as string,
+      filter as Filter<TSchema>,
+      options || {}
+    );
+  }
+
+  /**
+   * Aggregate
+   */
+  aggregate<TResult = any>(
+    pipeline: Record<string, unknown>[],
+    options?: AggregateOptions
+  ): AggregationCursor<TResult> {
+    return this.collection.aggregate(pipeline, options) as AggregationCursor<TResult>;
   }
 }
