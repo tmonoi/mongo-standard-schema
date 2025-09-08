@@ -24,11 +24,10 @@ import type {
   Timestamp,
   UpdateManyModel,
   UpdateOneModel,
+  Binary,
 } from "mongodb";
 
 import { ObjectId } from "mongodb";
-
-import type { DeepPick } from "./DeepPick";
 // ============================================================================
 // Document Types
 // ============================================================================
@@ -464,3 +463,54 @@ export function getIds(
 ): ObjectId[] {
   return [...ids].map((id) => new ObjectId(id));
 }
+
+// ============================================================================
+// DeepPick Types
+// ============================================================================
+type UnionKeyOf<Type> = Type extends infer T ? keyof T : never;
+
+type HeadPaths<Paths extends string> = Paths extends `${infer Head}.${string}`
+  ? Head
+  : Paths;
+
+type InnerKeys<HeadKey extends string, Paths extends string> = [
+  Extract<Paths, `${HeadKey}.${string}`>
+] extends [`${HeadKey}.${infer RestKey}`]
+  ? RestKey
+  : never;
+
+export type RequiredProperties<Properties> = {
+  [Prop in keyof Properties]: undefined extends Properties[Prop] ? never : Prop;
+}[keyof Properties];
+
+export type OptionalProperties<Properties> = Exclude<
+  keyof Properties,
+  RequiredProperties<Properties>
+>;
+
+export type ObjectType<Properties> = Flatten<
+  Pick<Properties, NonNullable<RequiredProperties<Properties>>> & {
+    [Prop in OptionalProperties<Properties>]?: Properties[Prop];
+  }
+>;
+
+type InnerPick<Type, Paths extends string> = ObjectType<{
+  [HeadKey in UnionKeyOf<Type>]: DeepPick<
+    Type[HeadKey],
+    InnerKeys<HeadKey, Paths>
+  >;
+}>;
+
+type ArrayItemKeys<Paths extends string> = InnerKeys<`${number}`, Paths>;
+
+type Primitive = boolean | number | string | symbol | null | undefined;
+
+export type DeepPick<Type, Paths extends string> = Type extends
+  | Binary
+  | Date
+  | ObjectId
+  | Primitive
+  ? Type
+  : Type extends (infer ArrayItem)[]
+  ? DeepPick<ArrayItem, ArrayItemKeys<Paths>>[]
+  : Pick<InnerPick<Type, Paths>, HeadPaths<Paths> & UnionKeyOf<Type>>;

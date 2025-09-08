@@ -6,6 +6,7 @@ import { describe, test, expectTypeOf } from "vitest";
 import { type BulkWriteResult, ObjectId } from "mongodb";
 import { Client } from "../src/index.js";
 import type { Model } from "../src/model.js";
+import { testDbManager } from "./setup/mongodb-memory-server.js";
 
 // Test schema types
 type UserSchema = {
@@ -51,31 +52,16 @@ type PostSchema = {
   };
 };
 
-type StrictSchema = {
-  _id: string;
-  required: string;
-  optional?: string;
-  nested: {
-    required: string;
-    optional?: string;
-  };
-  union: "active" | "inactive" | "pending";
-  unionOptional?: "admin" | "user" | "guest";
-};
-
-// Mock database for type testing
-declare const testDb: any;
+const testDb = testDbManager.getDb();
 const client = Client.initialize(testDb);
 
 const User = client.model<UserSchema>("users");
 const Post = client.model<PostSchema>("posts");
-const Strict = client.model<StrictSchema>("strict");
 
 describe("Type checking tests", () => {
   test("Model type inference", () => {
     expectTypeOf(User).toEqualTypeOf<Model<UserSchema>>();
     expectTypeOf(Post).toEqualTypeOf<Model<PostSchema>>();
-    expectTypeOf(Strict).toEqualTypeOf<Model<StrictSchema>>();
   });
 
   describe("Find operations", () => {
@@ -95,11 +81,15 @@ describe("Type checking tests", () => {
     test("Check projection", async () => {
       const projectedUserResult = await User.findOne(
         { name: "John" },
-        { projection: { name: 1 } }
+        { projection: { name: 1, profile: 1 } }
       );
       expectTypeOf(projectedUserResult).toEqualTypeOf<{
         _id: string;
         name: string;
+        profile?: {
+          bio: string;
+          avatar?: string;
+        };
       } | null>();
 
       const projectedUsersResult = await User.findMany(
@@ -433,13 +423,13 @@ describe("Type checking tests", () => {
             filter: { name: "John" },
           },
         },
-        
+
         {
           deleteMany: {
             filter: { name: "John" },
           },
         },
-        
+
         {
           replaceOne: {
             filter: { name: "John" },
@@ -464,7 +454,7 @@ describe("Type checking tests", () => {
       expectTypeOf(estimatedDocumentCountResult).toEqualTypeOf<number>();
     });
   });
-  
+
   describe("Distinct operations", () => {
     test("Check distinct return types", async () => {
       const distinctResult = await User.distinct("name");
@@ -474,16 +464,23 @@ describe("Type checking tests", () => {
 
   describe("Aggregate operations", () => {
     test("Check aggregate return types", async () => {
-      const aggregateResult = await User.aggregate<UserSchema>([{ $match: { name: "John" } }]).toArray();
+      const aggregateResult = await User.aggregate<UserSchema>([
+        { $match: { name: "John" } },
+      ]).toArray();
       expectTypeOf(aggregateResult).toEqualTypeOf<UserSchema[]>();
 
-      const aggregateResult2 = await User.aggregate<{ _id: string; count: number }>([
+      const aggregateResult2 = await User.aggregate<{
+        _id: string;
+        count: number;
+      }>([
         { $group: { _id: "$name", count: { $sum: 1 } } },
         { $limit: 10 },
         { $skip: 0 },
         { $sort: { count: -1 } },
       ]).toArray();
-      expectTypeOf(aggregateResult2).toEqualTypeOf<{ _id: string; count: number }[]>();
+      expectTypeOf(aggregateResult2).toEqualTypeOf<
+        { _id: string; count: number }[]
+      >();
     });
   });
 });
