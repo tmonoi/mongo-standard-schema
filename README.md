@@ -45,7 +45,7 @@ const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
 const dbConnection = mongoClient.db('myapp');
 const client = Client.initialize(dbConnection);
 
-// Define your schema
+// Define your schema with string _id (default approach)
 const User = client.model(
   'users',
   zodAdapter(z.object({
@@ -92,7 +92,7 @@ const mongoClient = await MongoClient.connect('mongodb://localhost:27017');
 const dbConnection = mongoClient.db('myapp');
 const client = Client.initialize(dbConnection);
 
-// Define your schema
+// Define your schema with string _id (default approach)
 const User = client.model(
   'users',
   valibotAdapter(v.object({
@@ -217,20 +217,79 @@ await User.updateOne(
 
 ## ObjectId Handling
 
-The library automatically handles ObjectId conversion:
+The library provides flexible `_id` handling based on your schema definition:
+
+### String `_id` (Default)
+
+When you define `_id` as a string in your schema, the library handles automatic conversion:
 
 - **User-facing**: All `_id` fields are treated as strings
 - **Database**: Automatically converted to MongoDB ObjectId for storage
 - **Queries**: String `_id` values in filters are automatically converted to ObjectId
 
 ```typescript
+const User = client.model('users', zodAdapter(z.object({
+  _id: z.string(), // String _id
+  name: z.string(),
+})));
+
 // You work with strings
 const user = await User.insertOne({ name: 'John' });
 console.log(typeof user._id); // "string"
 
-// But MongoDB stores ObjectId
+// But MongoDB stores ObjectId internally
 const foundUser = await User.findById(user._id); // Works seamlessly
 ```
+
+### ObjectId `_id` (Advanced)
+
+For cases where you need to work directly with MongoDB ObjectId instances, you can define `_id` as ObjectId in your schema:
+
+```typescript
+import { objectId } from '@safe-mongo/zod'; // or objectIdSchema() for direct use
+
+const User = client.model('users', zodAdapter(z.object({
+  _id: objectId(), // ObjectId _id
+  name: z.string(),
+})));
+
+// _id is optional for inserts - MongoDB generates it
+const user = await User.insertOne({ name: 'John' });
+console.log(user._id instanceof ObjectId); // true
+
+// You can also provide your own ObjectId
+const customId = new ObjectId();
+const user2 = await User.insertOne({
+  _id: customId,
+  name: 'Jane'
+});
+
+// Queries work with ObjectId instances
+const found = await User.findById(customId);
+```
+
+### Key Differences
+
+| Feature | String `_id` | ObjectId `_id` |
+|---------|--------------|----------------|
+| Type in code | `string` | `ObjectId` |
+| Type in MongoDB | `ObjectId` (converted) | `ObjectId` |
+| Required on insert | No (auto-generated) | No (auto-generated) |
+| Conversion | Automatic | None needed |
+| Use case | Simpler API, string-based IDs | Direct ObjectId control |
+
+### Choosing the Right Approach
+
+- **Use String `_id`** when:
+  - You want a simpler, string-based API
+  - You're building REST APIs that use string IDs in URLs
+  - You prefer working with strings throughout your application
+
+- **Use ObjectId `_id`** when:
+  - You need direct control over ObjectId instances
+  - You're working with existing MongoDB data that uses ObjectId
+  - You want to avoid conversion overhead
+  - You need ObjectId-specific features (timestamps, etc.)
 
 ## Validation
 
@@ -406,22 +465,6 @@ import { type Adapter } from '@safe-mongo/core';
 class MyCustomAdapter<Input, Output> implements Adapter<Input, Output> {
   parse(data: unknown): Output {
     // Implement validation
-  }
-  
-  safeParse(data: unknown) {
-    // Implement safe validation
-  }
-  
-  partial() {
-    // Implement partial schema
-  }
-  
-  optional() {
-    // Implement optional schema
-  }
-  
-  getSchema() {
-    // Return the original schema
   }
 }
 

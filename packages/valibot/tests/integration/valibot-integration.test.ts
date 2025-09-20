@@ -29,8 +29,9 @@ describe('Valibot Integration', () => {
 
     const User = client.model('users', valibotAdapter(userSchema));
 
-    // Test insertOne - _id should be optional
+    // Test insertOne - _id is required for string schema
     const doc1 = await User.insertOne({
+      _id: 'user1',
       name: 'John',
       age: 20,
       email: 'john@example.com',
@@ -72,6 +73,7 @@ describe('Valibot Integration', () => {
     // Test validation failure - negative age
     await expect(
       User.insertOne({
+        _id: 'user2',
         name: 'John',
         age: -5,
         email: 'john@example.com',
@@ -81,6 +83,7 @@ describe('Valibot Integration', () => {
     // Test validation failure - invalid email
     await expect(
       User.insertOne({
+        _id: 'user3',
         name: 'John',
         age: 20,
         email: 'not-an-email',
@@ -89,6 +92,7 @@ describe('Valibot Integration', () => {
 
     // Test successful validation
     const validDoc = await User.insertOne({
+      _id: 'user4',
       name: 'Jane',
       age: 25,
       email: 'jane@example.com',
@@ -109,6 +113,7 @@ describe('Valibot Integration', () => {
     const User = client.model('users', valibotAdapter(userSchema));
 
     const doc = await User.insertOne({
+      _id: 'user5',
       name: 'John',
     });
     
@@ -134,6 +139,7 @@ describe('Valibot Integration', () => {
     const User = client.model('users', valibotAdapter(userSchema));
 
     const doc = await User.insertOne({
+      _id: 'user6',
       name: 'John',
       addresses: [
         {
@@ -157,6 +163,7 @@ describe('Valibot Integration', () => {
     // Test invalid zipCode
     await expect(
       User.insertOne({
+        _id: 'user7',
         name: 'Jane',
         addresses: [
           {
@@ -183,6 +190,7 @@ describe('Valibot Integration', () => {
     const User = client.model('users', valibotAdapter(userSchema));
 
     const adminUser = await User.insertOne({
+      _id: 'user8',
       name: 'Admin',
       role: 'admin',
     });
@@ -191,6 +199,7 @@ describe('Valibot Integration', () => {
     // Test invalid role
     await expect(
       User.insertOne({
+        _id: 'user9',
         name: 'Invalid',
         role: 'superuser' as any,
       }),
@@ -217,12 +226,14 @@ describe('Valibot Integration', () => {
 
     // Create a user
     const user = await User.insertOne({
+      _id: 'user10',
       name: 'John Doe',
       email: 'john@example.com',
     });
 
     // Create a post
     const post = await Post.insertOne({
+      _id: 'post1',
       title: 'My First Post',
       content: 'Hello, world!',
       authorId: user._id,
