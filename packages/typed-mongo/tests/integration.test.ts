@@ -451,6 +451,106 @@ describe("typed-mongo Integration Tests", () => {
     });
   });
 
+  describe("replaceOne", () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: "user1",
+        name: "Alice",
+        age: 25,
+        email: "alice@example.com",
+        tags: ["user"],
+        profile: {
+          bio: "Developer",
+          avatar: "avatar1.jpg",
+        },
+      });
+    });
+
+    test("should replace a document completely", async () => {
+      const result = await User.replaceOne(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice Replaced",
+          age: 30,
+          // Note: email, tags, and profile are not included, so they will be removed
+        }
+      );
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.matchedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: "user1" });
+      expect(doc?.name).toBe("Alice Replaced");
+      expect(doc?.age).toBe(30);
+      expect(doc?.email).toBeUndefined();
+      expect(doc?.tags).toBeUndefined();
+      expect(doc?.profile).toBeUndefined();
+    });
+
+    test("should handle upsert option", async () => {
+      const result = await User.replaceOne(
+        { _id: "user2" },
+        {
+          _id: "user2",
+          name: "Bob",
+          age: 35,
+        },
+        { upsert: true }
+      );
+
+      expect(result.acknowledged).toBe(true);
+      expect(result.upsertedCount).toBe(1);
+      expect(result.upsertedId).toBe("user2");
+
+      const doc = await User.findOne({ _id: "user2" });
+      expect(doc?.name).toBe("Bob");
+      expect(doc?.age).toBe(35);
+    });
+
+    test("should return zero modified when no match", async () => {
+      const result = await User.replaceOne(
+        { _id: "nonexistent" },
+        {
+          _id: "nonexistent",
+          name: "Nobody",
+          age: 100,
+        }
+      );
+
+      expect(result.matchedCount).toBe(0);
+      expect(result.modifiedCount).toBe(0);
+    });
+
+    test("should replace with nested objects", async () => {
+      const result = await User.replaceOne(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice Updated",
+          age: 26,
+          profile: {
+            bio: "Senior Developer",
+            avatar: "new-avatar.jpg",
+          },
+          settings: {
+            theme: "dark",
+            notifications: false,
+          },
+        }
+      );
+
+      expect(result.modifiedCount).toBe(1);
+
+      const doc = await User.findOne({ _id: "user1" });
+      expect(doc?.name).toBe("Alice Updated");
+      expect(doc?.profile?.bio).toBe("Senior Developer");
+      expect(doc?.settings?.theme).toBe("dark");
+      expect(doc?.email).toBeUndefined(); // Original email is removed
+    });
+  });
+
   describe("findOneAndUpdate", () => {
     beforeEach(async () => {
       await User.insertOne({
@@ -516,6 +616,159 @@ describe("typed-mongo Integration Tests", () => {
       expect(doc?.name).toBe("Alice");
       expect(doc?.age).toBe(25);
       expect(doc?._id).toBeUndefined();
+    });
+  });
+
+  describe("findOneAndReplace", () => {
+    beforeEach(async () => {
+      await User.insertOne({
+        _id: "user1",
+        name: "Alice",
+        age: 25,
+        email: "alice@example.com",
+        tags: ["user", "admin"],
+        profile: {
+          bio: "Developer",
+        },
+      });
+    });
+
+    test("should find and replace returning old document by default", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice Replaced",
+          age: 30,
+        }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Alice"); // Returns old document
+      expect(doc?.age).toBe(25);
+      expect(doc?.email).toBe("alice@example.com");
+
+      const updated = await User.findOne({ _id: "user1" });
+      expect(updated?.name).toBe("Alice Replaced");
+      expect(updated?.age).toBe(30);
+      expect(updated?.email).toBeUndefined(); // Replaced document doesn't have email
+    });
+
+    test("should return new document with returnDocument: after", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice New",
+          age: 28,
+        },
+        { returnDocument: "after" }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Alice New"); // Returns new document
+      expect(doc?.age).toBe(28);
+      expect(doc?.email).toBeUndefined(); // New document doesn't have email
+    });
+
+    test("should handle upsert with findOneAndReplace", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "user2" },
+        {
+          _id: "user2",
+          name: "Bob",
+          age: 30,
+        },
+        { upsert: true, returnDocument: "after" }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Bob");
+      expect(doc?.age).toBe(30);
+
+      const inserted = await User.findOne({ _id: "user2" });
+      expect(inserted).toBeDefined();
+      expect(inserted?.name).toBe("Bob");
+    });
+
+    test("should return null when no match and no upsert", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "nonexistent" },
+        {
+          _id: "nonexistent",
+          name: "Nobody",
+          age: 100,
+        }
+      );
+
+      expect(doc).toBeNull();
+    });
+
+    test("should support projection", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice Projected",
+          age: 27,
+        },
+        { projection: { name: 1, _id: 0 } }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Alice"); // Old name with projection
+      expect(doc?._id).toBeUndefined(); // Excluded by projection
+      // age is not included in projection, so we can't check it
+    });
+
+    test("should support sort option when multiple matches", async () => {
+      await User.insertMany([
+        { _id: "user2", name: "Bob", age: 30 },
+        { _id: "user3", name: "Charlie", age: 35 },
+      ]);
+
+      const doc = await User.findOneAndReplace(
+        { age: { $gte: 25 } },
+        {
+          _id: "user3", // Will replace user3 since it has highest age
+          name: "Replaced User",
+          age: 40,
+        },
+        { sort: { age: -1 } } // Replace the oldest first
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Charlie"); // Highest age was replaced
+
+      const replaced = await User.findOne({ name: "Replaced User" });
+      expect(replaced).toBeDefined();
+      expect(replaced?.age).toBe(40);
+    });
+
+    test("should completely replace nested structures", async () => {
+      const doc = await User.findOneAndReplace(
+        { _id: "user1" },
+        {
+          _id: "user1",
+          name: "Alice Complete",
+          age: 29,
+          settings: {
+            theme: "light",
+            notifications: true,
+          },
+          metadata: {
+            created: new Date(),
+          },
+        },
+        { returnDocument: "after" }
+      );
+
+      expect(doc).toBeDefined();
+      expect(doc?.name).toBe("Alice Complete");
+      expect(doc?.settings?.theme).toBe("light");
+      expect(doc?.metadata?.created).toBeInstanceOf(Date);
+      expect(doc?.profile).toBeUndefined(); // Original profile is gone
+      expect(doc?.tags).toBeUndefined(); // Original tags are gone
     });
   });
 

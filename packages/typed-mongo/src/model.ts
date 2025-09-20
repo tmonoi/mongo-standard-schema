@@ -24,6 +24,8 @@ import type {
   AnyBulkWriteOperation,
   AggregateOptions,
   AggregationCursor,
+  ReplaceOptions,
+  FindOneAndReplaceOptions,
 } from "mongodb";
 import type {
   StrictOptionalId,
@@ -142,6 +144,21 @@ export class Model<TSchema extends BaseSchema> {
   }
 
   /**
+   * Replace a single document
+   */
+  async replaceOne(
+    filter: PaprFilter<TSchema>,
+    replacement: StrictOptionalId<TSchema>,
+    options?: ReplaceOptions
+  ): Promise<UpdateResult<TSchema>> {
+    return this.collection.replaceOne(
+      filter as Filter<TSchema>,
+      replacement as TSchema,
+      options
+    );
+  }
+
+  /**
    * Find and update a single document
    */
   async findOneAndUpdate<TProjection extends Projection<TSchema> | undefined>(
@@ -152,6 +169,22 @@ export class Model<TSchema extends BaseSchema> {
     const result = await this.collection.findOneAndUpdate(
       filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
+      options || {}
+    );
+    return result as unknown as ProjectionType<TSchema, TProjection>;
+  }
+
+  /**
+   * Find and replace a single document
+   */
+  async findOneAndReplace<TProjection extends Projection<TSchema> | undefined>(
+    filter: PaprFilter<TSchema>,
+    replacement: StrictOptionalId<TSchema>,
+    options?: FindOneAndReplaceOptions & { projection?: TProjection }
+  ): Promise<ProjectionType<TSchema, TProjection> | null> {
+    const result = await this.collection.findOneAndReplace(
+      filter as Filter<TSchema>,
+      replacement as TSchema,
       options || {}
     );
     return result as unknown as ProjectionType<TSchema, TProjection>;
