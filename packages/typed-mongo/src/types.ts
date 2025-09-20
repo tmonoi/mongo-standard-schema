@@ -160,23 +160,23 @@ export type PropertyType<
     : PropertyNestedType<NonNullable<Type>, Property>
   : PropertyNestedType<NonNullable<Type>, Property>;
 
-export type PaprFilter<TSchema> =
+export type MongoFilter<TSchema> =
   | Partial<TSchema>
-  | (PaprFilterConditions<TSchema> &
-      PaprRootFilterOperators<TSchema>);
+  | (MongoFilterConditions<TSchema> &
+      MongoRootFilterOperators<TSchema>);
 
-export type PaprFilterConditions<TSchema> = {
-  [Property in Join<NestedPaths<TSchema, []>, ".">]?: PaprCondition<
+export type MongoFilterConditions<TSchema> = {
+  [Property in Join<NestedPaths<TSchema, []>, ".">]?: MongoCondition<
     PropertyType<TSchema, Property>
   >;
 } & {
-  [K in keyof TSchema]?: PaprCondition<TSchema[K]>;
+  [K in keyof TSchema]?: MongoCondition<TSchema[K]>;
 };
 
-export interface PaprRootFilterOperators<TSchema> {
-  $and?: PaprFilter<TSchema>[];
-  $nor?: PaprFilter<TSchema>[];
-  $or?: PaprFilter<TSchema>[];
+export interface MongoRootFilterOperators<TSchema> {
+  $and?: MongoFilter<TSchema>[];
+  $nor?: MongoFilter<TSchema>[];
+  $or?: MongoFilter<TSchema>[];
   $expr?: Record<string, any>;
   $text?: {
     $search: string;
@@ -188,11 +188,11 @@ export interface PaprRootFilterOperators<TSchema> {
   $comment?: Document | string;
 }
 
-export type PaprCondition<Type> =
+export type MongoCondition<Type> =
   | AlternativeType<Type>
-  | PaprFilterOperators<AlternativeType<Type>>;
+  | MongoFilterOperators<AlternativeType<Type>>;
 
-export interface PaprFilterOperators<TValue> {
+export interface MongoFilterOperators<TValue> {
   $eq?: TValue;
   $gt?: TValue;
   $gte?: TValue;
@@ -202,8 +202,8 @@ export interface PaprFilterOperators<TValue> {
   $ne?: TValue;
   $nin?: readonly TValue[];
   $not?: TValue extends string
-    ? PaprFilterOperators<TValue> | RegExp
-    : PaprFilterOperators<TValue>;
+    ? MongoFilterOperators<TValue> | RegExp
+    : MongoFilterOperators<TValue>;
   $exists?: boolean;
   $type?: BSONType | BSONTypeAlias;
   $expr?: Record<string, any>;
@@ -235,22 +235,22 @@ export interface PaprFilterOperators<TValue> {
 /**
  * Custom PushOperator type that properly handles array fields
  */
-export type PaprPushOperator<TSchema> = PushOperator<TSchema>;
+export type MongoPushOperator<TSchema> = PushOperator<TSchema>;
 
 /**
  * Custom PullOperator type that properly handles array fields
  */
-export type PaprPullOperator<TSchema> = PullOperator<TSchema>;
+export type MongoPullOperator<TSchema> = PullOperator<TSchema>;
 
 /**
  * Custom PullAllOperator type that properly handles array fields
  */
-export type PaprPullAllOperator<TSchema> = PullAllOperator<TSchema>;
+export type MongoPullAllOperator<TSchema> = PullAllOperator<TSchema>;
 
 /**
  * Returns all dot-notation properties of a schema with their corresponding types.
  */
-export type PaprAllProperties<TSchema> = {
+export type MongoAllProperties<TSchema> = {
   [Property in Join<NestedPaths<TSchema, []>, ".">]?: PropertyType<
     TSchema,
     Property
@@ -262,9 +262,9 @@ export type PaprAllProperties<TSchema> = {
 /**
  * Returns all array-specific element dot-notation properties
  */
-export type PaprArrayElementsProperties<TSchema> = {
+export type MongoArrayElementsProperties<TSchema> = {
   [Property in `${Extract<
-    KeysOfAType<PaprAllProperties<TSchema>, any[]>,
+    KeysOfAType<MongoAllProperties<TSchema>, any[]>,
     string
   >}.$${"" | `[${string}]`}`]?: ArrayElement<
     PropertyType<
@@ -277,9 +277,9 @@ export type PaprArrayElementsProperties<TSchema> = {
 /**
  * Returns all array-specific nested dot-notation properties
  */
-export type PaprArrayNestedProperties<TSchema> = {
+export type MongoArrayNestedProperties<TSchema> = {
   [Property in `${Extract<
-    KeysOfAType<PaprAllProperties<TSchema>, Record<string, any>[]>,
+    KeysOfAType<MongoAllProperties<TSchema>, Record<string, any>[]>,
     string
   >}.$${"" | `[${string}]`}.${string}`]?: PropertyType<
     TSchema,
@@ -292,14 +292,14 @@ export type PaprArrayNestedProperties<TSchema> = {
 /**
  * Match keys and values for update operations
  */
-export type PaprMatchKeysAndValues<TSchema> = PaprAllProperties<TSchema> &
-  PaprArrayElementsProperties<TSchema> &
-  PaprArrayNestedProperties<TSchema>;
+export type MongoMatchKeysAndValues<TSchema> = MongoAllProperties<TSchema> &
+  MongoArrayElementsProperties<TSchema> &
+  MongoArrayNestedProperties<TSchema>;
 
 /**
  * MongoDB update filter
  */
-export interface PaprUpdateFilter<TSchema> {
+export interface MongoUpdateFilter<TSchema> {
   $currentDate?: OnlyFieldsOfType<
     TSchema,
     Date | Timestamp,
@@ -309,18 +309,18 @@ export interface PaprUpdateFilter<TSchema> {
       }
   >;
   $inc?: OnlyFieldsOfType<TSchema, NumericType | undefined>;
-  $min?: PaprMatchKeysAndValues<TSchema>;
-  $max?: PaprMatchKeysAndValues<TSchema>;
+  $min?: MongoMatchKeysAndValues<TSchema>;
+  $max?: MongoMatchKeysAndValues<TSchema>;
   $mul?: OnlyFieldsOfType<TSchema, NumericType | undefined>;
   $rename?: Record<string, string>;
-  $set?: PaprMatchKeysAndValues<TSchema>;
-  $setOnInsert?: PaprMatchKeysAndValues<TSchema>;
+  $set?: MongoMatchKeysAndValues<TSchema>;
+  $setOnInsert?: MongoMatchKeysAndValues<TSchema>;
   $unset?: OnlyFieldsOfType<TSchema, any, '' | 1 | true>;
   $addToSet?: SetFields<TSchema>;
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
-  $pull?: PaprPullOperator<TSchema>;
-  $push?: PaprPushOperator<TSchema>;
-  $pullAll?: PaprPullAllOperator<TSchema>;
+  $pull?: MongoPullOperator<TSchema>;
+  $push?: MongoPushOperator<TSchema>;
+  $pullAll?: MongoPullAllOperator<TSchema>;
   $bit?: OnlyFieldsOfType<
     TSchema,
     NumericType | undefined,
@@ -364,26 +364,26 @@ export type ProjectionResult<TSchema extends BaseSchema, TProjection> = TProject
 // ============================================================================
 // Bulk Write Types
 // ============================================================================
-export type PaprBulkWriteOperation<TSchema extends BaseSchema> =
+export type MongoBulkWriteOperation<TSchema extends BaseSchema> =
   | {
-      deleteMany: Omit<DeleteManyModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
+      deleteMany: Omit<DeleteManyModel<TSchema>, 'filter'> & { filter: MongoFilter<TSchema> };
     }
   | {
-      deleteOne: Omit<DeleteOneModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
+      deleteOne: Omit<DeleteOneModel<TSchema>, 'filter'> & { filter: MongoFilter<TSchema> };
     }
   | {
-      replaceOne: Omit<ReplaceOneModel<TSchema>, 'filter'> & { filter: PaprFilter<TSchema> };
+      replaceOne: Omit<ReplaceOneModel<TSchema>, 'filter'> & { filter: MongoFilter<TSchema> };
     }
   | {
       updateMany: Omit<UpdateManyModel<TSchema>, 'filter' | 'update'> & {
-        filter: PaprFilter<TSchema>;
-        update: PaprUpdateFilter<TSchema>;
+        filter: MongoFilter<TSchema>;
+        update: MongoUpdateFilter<TSchema>;
       };
     }
   | {
       updateOne: Omit<UpdateOneModel<TSchema>, 'filter' | 'update'> & {
-        filter: PaprFilter<TSchema>;
-        update: PaprUpdateFilter<TSchema>;
+        filter: MongoFilter<TSchema>;
+        update: MongoUpdateFilter<TSchema>;
       };
     }
   | {

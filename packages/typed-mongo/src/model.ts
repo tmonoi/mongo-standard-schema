@@ -29,12 +29,12 @@ import type {
 } from "mongodb";
 import type {
   StrictOptionalId,
-  PaprFilter,
-  PaprUpdateFilter,
+  MongoFilter,
+  MongoUpdateFilter,
   Projection,
   ProjectionType,
   BaseSchema,
-  PaprBulkWriteOperation,
+  MongoBulkWriteOperation,
 } from "./types.js";
 
 /**
@@ -51,7 +51,7 @@ export class Model<TSchema extends BaseSchema> {
    * Find a single document
    */
   async findOne<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOne(
@@ -65,7 +65,7 @@ export class Model<TSchema extends BaseSchema> {
    * Find documents and return a cursor (MongoDB standard behavior)
    */
   find<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): FindCursor<ProjectionType<TSchema, TProjection>> {
     return this.collection.find(
@@ -78,7 +78,7 @@ export class Model<TSchema extends BaseSchema> {
    * Find multiple documents and return as array (convenience method)
    */
   async findMany<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: FindOptions<TSchema> & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection>[]> {
     const cursor = this.collection.find(filter as Filter<TSchema>, options);
@@ -117,8 +117,8 @@ export class Model<TSchema extends BaseSchema> {
    * Update a single document
    */
   async updateOne(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
     options?: UpdateOptions
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateOne(
@@ -132,8 +132,8 @@ export class Model<TSchema extends BaseSchema> {
    * Update multiple documents
    */
   async updateMany(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
     options?: UpdateOptions
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateMany(
@@ -147,7 +147,7 @@ export class Model<TSchema extends BaseSchema> {
    * Replace a single document
    */
   async replaceOne(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     replacement: StrictOptionalId<TSchema>,
     options?: ReplaceOptions
   ): Promise<UpdateResult<TSchema>> {
@@ -162,8 +162,8 @@ export class Model<TSchema extends BaseSchema> {
    * Find and update a single document
    */
   async findOneAndUpdate<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
     options?: FindOneAndUpdateOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndUpdate(
@@ -178,7 +178,7 @@ export class Model<TSchema extends BaseSchema> {
    * Find and replace a single document
    */
   async findOneAndReplace<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     replacement: StrictOptionalId<TSchema>,
     options?: FindOneAndReplaceOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
@@ -194,7 +194,7 @@ export class Model<TSchema extends BaseSchema> {
    * Delete a single document
    */
   async deleteOne(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
     return this.collection.deleteOne(filter as Filter<TSchema>, options);
@@ -204,7 +204,7 @@ export class Model<TSchema extends BaseSchema> {
    * Delete multiple documents
    */
   async deleteMany(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: DeleteOptions
   ): Promise<DeleteResult> {
     return this.collection.deleteMany(filter as Filter<TSchema>, options);
@@ -214,7 +214,7 @@ export class Model<TSchema extends BaseSchema> {
    * Find and delete a single document
    */
   async findOneAndDelete<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
+    filter: MongoFilter<TSchema>,
     options?: FindOneAndDeleteOptions & { projection?: TProjection }
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndDelete(
@@ -229,7 +229,7 @@ export class Model<TSchema extends BaseSchema> {
    * Bulk write
    */
   async bulkWrite(
-    operations: readonly PaprBulkWriteOperation<TSchema>[],
+    operations: readonly MongoBulkWriteOperation<TSchema>[],
     options?: BulkWriteOptions
   ): Promise<BulkWriteResult> {
     return this.collection.bulkWrite(operations as AnyBulkWriteOperation<TSchema>[], options);
@@ -239,7 +239,7 @@ export class Model<TSchema extends BaseSchema> {
    * Count documents
    */
   async countDocuments(
-    filter: PaprFilter<TSchema> = {},
+    filter: MongoFilter<TSchema> = {},
     options?: CountDocumentsOptions
   ): Promise<number> {
     return this.collection.countDocuments(filter as Filter<TSchema>, options);
@@ -259,7 +259,7 @@ export class Model<TSchema extends BaseSchema> {
    */
   async distinct<K extends keyof TSchema>(
     key: K,
-    filter: PaprFilter<TSchema> = {},
+    filter: MongoFilter<TSchema> = {},
     options?: DistinctOptions
   ): Promise<TSchema[K][]> {
     return this.collection.distinct(
