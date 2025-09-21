@@ -39,35 +39,6 @@ export type StrictOptionalId<TSchema> = TSchema extends { _id: ObjectId }
     ? TSchema // string _id is required
     : TSchema & { _id?: string };
 
-/**
- * Extract the _id type from a schema
- */
-export type ExtractIdType<TSchema> = TSchema extends { _id: infer IdType } ? IdType : string;
-
-/**
- * Check if a schema has ObjectId as _id type
- */
-export type HasObjectId<TSchema> = TSchema extends { _id: ObjectId } ? true : false;
-
-/**
- * Recursively converts fields named `_id` from `string` to `ObjectId`.
- */
-export type WithMongoId<T> = T extends (infer U)[]
-  ? WithMongoId<U>[]
-  : T extends Date
-    ? T
-    : T extends object
-      ? {
-          [K in keyof T]: K extends '_id'
-            ? ObjectId
-            : T[K] extends (infer V)[]
-              ? WithMongoId<V>[]
-              : T[K] extends object
-                ? WithMongoId<T[K]>
-                : T[K];
-        }
-      : T;
-
 // ============================================================================
 // Filter Types
 // ============================================================================
