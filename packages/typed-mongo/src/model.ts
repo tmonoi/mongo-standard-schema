@@ -1,39 +1,40 @@
 import type {
+  AggregateOptions,
+  AggregationCursor,
+  AnyBulkWriteOperation,
   BulkWriteOptions,
+  BulkWriteResult,
   Collection,
   CountDocumentsOptions,
   Db,
   DeleteOptions,
   DeleteResult,
-  FindCursor,
-  FindOneAndDeleteOptions,
-  FindOneAndUpdateOptions,
-  FindOptions,
-  InsertOneOptions,
-  UpdateOptions,
-  UpdateResult,
-  UpdateFilter,
-  Document,
-  Filter,
-  InsertManyResult,
-  InsertOneResult,
-  OptionalUnlessRequiredId,
   DistinctOptions,
   EstimatedDocumentCountOptions,
-  BulkWriteResult,
-  AnyBulkWriteOperation,
-  AggregateOptions,
-  AggregationCursor,
-} from "mongodb";
+  Filter,
+  FindCursor,
+  FindOneAndDeleteOptions,
+  FindOneAndReplaceOptions,
+  FindOneAndUpdateOptions,
+  FindOptions,
+  InsertManyResult,
+  InsertOneOptions,
+  InsertOneResult,
+  OptionalUnlessRequiredId,
+  ReplaceOptions,
+  UpdateFilter,
+  UpdateOptions,
+  UpdateResult,
+} from 'mongodb';
 import type {
-  StrictOptionalId,
-  PaprFilter,
-  PaprUpdateFilter,
+  BaseSchema,
+  MongoBulkWriteOperation,
+  MongoFilter,
+  MongoUpdateFilter,
   Projection,
   ProjectionType,
-  BaseSchema,
-  PaprBulkWriteOperation,
-} from "./types.js";
+  StrictOptionalId,
+} from './types.js';
 
 /**
  * Model class that provides type-safe MongoDB operations
@@ -49,13 +50,10 @@ export class Model<TSchema extends BaseSchema> {
    * Find a single document
    */
   async findOne<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    options?: FindOptions<TSchema> & { projection?: TProjection }
+    filter: MongoFilter<TSchema>,
+    options?: FindOptions<TSchema> & { projection?: TProjection },
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
-    const result = await this.collection.findOne(
-      filter as Filter<TSchema>,
-      options
-    );
+    const result = await this.collection.findOne(filter as Filter<TSchema>, options);
     return result as unknown as ProjectionType<TSchema, TProjection>;
   }
 
@@ -63,21 +61,20 @@ export class Model<TSchema extends BaseSchema> {
    * Find documents and return a cursor (MongoDB standard behavior)
    */
   find<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    options?: FindOptions<TSchema> & { projection?: TProjection }
+    filter: MongoFilter<TSchema>,
+    options?: FindOptions<TSchema> & { projection?: TProjection },
   ): FindCursor<ProjectionType<TSchema, TProjection>> {
-    return this.collection.find(
-      filter as Filter<TSchema>,
-      options
-    ) as unknown as FindCursor<ProjectionType<TSchema, TProjection>>;
+    return this.collection.find(filter as Filter<TSchema>, options) as unknown as FindCursor<
+      ProjectionType<TSchema, TProjection>
+    >;
   }
 
   /**
    * Find multiple documents and return as array (convenience method)
    */
   async findMany<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    options?: FindOptions<TSchema> & { projection?: TProjection }
+    filter: MongoFilter<TSchema>,
+    options?: FindOptions<TSchema> & { projection?: TProjection },
   ): Promise<ProjectionType<TSchema, TProjection>[]> {
     const cursor = this.collection.find(filter as Filter<TSchema>, options);
     const results = await cursor.toArray();
@@ -89,11 +86,11 @@ export class Model<TSchema extends BaseSchema> {
    */
   async insertOne(
     doc: StrictOptionalId<TSchema>,
-    options?: InsertOneOptions
+    options?: InsertOneOptions,
   ): Promise<InsertOneResult<TSchema>> {
     const result = await this.collection.insertOne(
       doc as unknown as OptionalUnlessRequiredId<TSchema>,
-      options
+      options,
     );
     return result;
   }
@@ -103,11 +100,11 @@ export class Model<TSchema extends BaseSchema> {
    */
   async insertMany(
     docs: StrictOptionalId<TSchema>[],
-    options?: BulkWriteOptions
+    options?: BulkWriteOptions,
   ): Promise<InsertManyResult<TSchema>> {
     return this.collection.insertMany(
       docs as unknown as OptionalUnlessRequiredId<TSchema>[],
-      options
+      options,
     );
   }
 
@@ -115,14 +112,14 @@ export class Model<TSchema extends BaseSchema> {
    * Update a single document
    */
   async updateOne(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
-    options?: UpdateOptions
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
+    options?: UpdateOptions,
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateOne(
       filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
-      options
+      options,
     );
   }
 
@@ -130,29 +127,56 @@ export class Model<TSchema extends BaseSchema> {
    * Update multiple documents
    */
   async updateMany(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
-    options?: UpdateOptions
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
+    options?: UpdateOptions,
   ): Promise<UpdateResult<TSchema>> {
     return this.collection.updateMany(
       filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
-      options
+      options,
     );
+  }
+
+  /**
+   * Replace a single document
+   */
+  async replaceOne(
+    filter: MongoFilter<TSchema>,
+    replacement: StrictOptionalId<TSchema>,
+    options?: ReplaceOptions,
+  ): Promise<UpdateResult<TSchema>> {
+    return this.collection.replaceOne(filter as Filter<TSchema>, replacement as TSchema, options);
   }
 
   /**
    * Find and update a single document
    */
   async findOneAndUpdate<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    update: PaprUpdateFilter<TSchema>,
-    options?: FindOneAndUpdateOptions & { projection?: TProjection }
+    filter: MongoFilter<TSchema>,
+    update: MongoUpdateFilter<TSchema>,
+    options?: FindOneAndUpdateOptions & { projection?: TProjection },
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
     const result = await this.collection.findOneAndUpdate(
       filter as Filter<TSchema>,
       update as UpdateFilter<TSchema>,
-      options || {}
+      options || {},
+    );
+    return result as unknown as ProjectionType<TSchema, TProjection>;
+  }
+
+  /**
+   * Find and replace a single document
+   */
+  async findOneAndReplace<TProjection extends Projection<TSchema> | undefined>(
+    filter: MongoFilter<TSchema>,
+    replacement: StrictOptionalId<TSchema>,
+    options?: FindOneAndReplaceOptions & { projection?: TProjection },
+  ): Promise<ProjectionType<TSchema, TProjection> | null> {
+    const result = await this.collection.findOneAndReplace(
+      filter as Filter<TSchema>,
+      replacement as TSchema,
+      options || {},
     );
     return result as unknown as ProjectionType<TSchema, TProjection>;
   }
@@ -160,20 +184,14 @@ export class Model<TSchema extends BaseSchema> {
   /**
    * Delete a single document
    */
-  async deleteOne(
-    filter: PaprFilter<TSchema>,
-    options?: DeleteOptions
-  ): Promise<DeleteResult> {
+  async deleteOne(filter: MongoFilter<TSchema>, options?: DeleteOptions): Promise<DeleteResult> {
     return this.collection.deleteOne(filter as Filter<TSchema>, options);
   }
 
   /**
    * Delete multiple documents
    */
-  async deleteMany(
-    filter: PaprFilter<TSchema>,
-    options?: DeleteOptions
-  ): Promise<DeleteResult> {
+  async deleteMany(filter: MongoFilter<TSchema>, options?: DeleteOptions): Promise<DeleteResult> {
     return this.collection.deleteMany(filter as Filter<TSchema>, options);
   }
 
@@ -181,13 +199,10 @@ export class Model<TSchema extends BaseSchema> {
    * Find and delete a single document
    */
   async findOneAndDelete<TProjection extends Projection<TSchema> | undefined>(
-    filter: PaprFilter<TSchema>,
-    options?: FindOneAndDeleteOptions & { projection?: TProjection }
+    filter: MongoFilter<TSchema>,
+    options?: FindOneAndDeleteOptions & { projection?: TProjection },
   ): Promise<ProjectionType<TSchema, TProjection> | null> {
-    const result = await this.collection.findOneAndDelete(
-      filter as Filter<TSchema>,
-      options || {}
-    );
+    const result = await this.collection.findOneAndDelete(filter as Filter<TSchema>, options || {});
 
     return result as unknown as ProjectionType<TSchema, TProjection>;
   }
@@ -196,8 +211,8 @@ export class Model<TSchema extends BaseSchema> {
    * Bulk write
    */
   async bulkWrite(
-    operations: readonly PaprBulkWriteOperation<TSchema>[],
-    options?: BulkWriteOptions
+    operations: readonly MongoBulkWriteOperation<TSchema>[],
+    options?: BulkWriteOptions,
   ): Promise<BulkWriteResult> {
     return this.collection.bulkWrite(operations as AnyBulkWriteOperation<TSchema>[], options);
   }
@@ -206,8 +221,8 @@ export class Model<TSchema extends BaseSchema> {
    * Count documents
    */
   async countDocuments(
-    filter: PaprFilter<TSchema> = {},
-    options?: CountDocumentsOptions
+    filter: MongoFilter<TSchema> = {},
+    options?: CountDocumentsOptions,
   ): Promise<number> {
     return this.collection.countDocuments(filter as Filter<TSchema>, options);
   }
@@ -215,9 +230,7 @@ export class Model<TSchema extends BaseSchema> {
   /**
    * Estimated document count
    */
-  async estimatedDocumentCount(
-    options?: EstimatedDocumentCountOptions
-  ): Promise<number> {
+  async estimatedDocumentCount(options?: EstimatedDocumentCountOptions): Promise<number> {
     return this.collection.estimatedDocumentCount(options);
   }
 
@@ -226,22 +239,19 @@ export class Model<TSchema extends BaseSchema> {
    */
   async distinct<K extends keyof TSchema>(
     key: K,
-    filter: PaprFilter<TSchema> = {},
-    options?: DistinctOptions
+    filter: MongoFilter<TSchema> = {},
+    options?: DistinctOptions,
   ): Promise<TSchema[K][]> {
-    return this.collection.distinct(
-      key as string,
-      filter as Filter<TSchema>,
-      options || {}
-    );
+    return this.collection.distinct(key as string, filter as Filter<TSchema>, options || {});
   }
 
   /**
    * Aggregate
    */
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB aggregate can return any type
   aggregate<TResult = any>(
     pipeline: Record<string, unknown>[],
-    options?: AggregateOptions
+    options?: AggregateOptions,
   ): AggregationCursor<TResult> {
     return this.collection.aggregate(pipeline, options) as AggregationCursor<TResult>;
   }

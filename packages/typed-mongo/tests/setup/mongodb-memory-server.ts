@@ -4,7 +4,7 @@ import { afterAll, beforeAll } from 'vitest';
 
 class TestDBManager {
   private static instance: TestDBManager;
-  
+
   private mongod?: MongoMemoryServer;
   private client?: MongoClient;
   public db?: Db;

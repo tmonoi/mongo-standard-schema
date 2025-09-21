@@ -15,18 +15,18 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData.ts',
-        'tests/**'
-      ]
+        'tests/**',
+      ],
     },
     typecheck: {
       enabled: true,
       include: ['**/*.test-d.ts'],
       tsconfig: './tsconfig.json',
-    }
+    },
   },
   resolve: {
     alias: {
-      '@': './src'
-    }
-  }
+      '@': './src',
+    },
+  },
 });

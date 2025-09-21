@@ -3,14 +3,14 @@ import { Model } from './model.js';
 import type { BaseSchema } from './types.js';
 
 /**
- * Main client class for safe-mongo
+ * Main client class for typed-mongo
  */
 export class Client {
   private mongoClient: MongoClient | undefined;
 
   constructor(
     private db: Db,
-    mongoClient?: MongoClient
+    mongoClient?: MongoClient,
   ) {
     this.mongoClient = mongoClient;
   }
@@ -18,19 +18,14 @@ export class Client {
   /**
    * Initialize client with MongoDB database connection
    */
-  static initialize(
-    db: Db,
-    mongoClient?: MongoClient
-  ): Client {
+  static initialize(db: Db, mongoClient?: MongoClient): Client {
     return new Client(db, mongoClient);
   }
 
   /**
    * Create a model with schema and adapter
    */
-  model<TSchema extends BaseSchema>(
-    collectionName: string,
-  ): Model<TSchema> {
+  model<TSchema extends BaseSchema>(collectionName: string): Model<TSchema> {
     return new Model(this.db, collectionName);
   }
 
@@ -39,18 +34,5 @@ export class Client {
    */
   getDb(): Db {
     return this.db;
-  }
-
-
-  /**
-   * Close the database connection
-   */
-  async close(): Promise<void> {
-    // Note: In practice, you should close the MongoClient, not the Db
-    // This method is provided for convenience but the actual connection
-    // management should be handled at the MongoClient level
-    if (this.mongoClient && typeof this.mongoClient.close === 'function') {
-      await this.mongoClient.close();
-    }
   }
 }
