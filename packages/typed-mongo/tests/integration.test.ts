@@ -1327,18 +1327,6 @@ describe('typed-mongo Integration Tests', () => {
       expect(model2).toBeDefined();
       expect(model1).not.toBe(model2);
     });
-
-    test('should close connection', async () => {
-      const testDb = testDbManager.getDb();
-      const testClient = Client.initialize(testDb);
-
-      // Verify it works
-      const model = testClient.model<UserSchema>('test');
-      await model.insertOne({ _id: 'test1', name: 'Test', age: 25 });
-
-      // Close should not throw
-      await expect(testClient.close()).resolves.toBeUndefined();
-    });
   });
 
   describe('Error handling', () => {

@@ -35,16 +35,4 @@ export class Client {
   getDb(): Db {
     return this.db;
   }
-
-  /**
-   * Close the database connection
-   */
-  async close(): Promise<void> {
-    // Note: In practice, you should close the MongoClient, not the Db
-    // This method is provided for convenience but the actual connection
-    // management should be handled at the MongoClient level
-    if (this.mongoClient && typeof this.mongoClient.close === 'function') {
-      await this.mongoClient.close();
-    }
-  }
 }
