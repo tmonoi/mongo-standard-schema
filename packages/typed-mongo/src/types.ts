@@ -24,7 +24,7 @@ import type {
   UpdateOneModel,
 } from 'mongodb';
 
-import { ObjectId } from 'mongodb';
+import type { ObjectId } from 'mongodb';
 // ============================================================================
 // Document Types
 // ============================================================================
@@ -223,22 +223,6 @@ export interface MongoFilterOperators<TValue> {
 // ============================================================================
 // Update Types
 // ============================================================================
-
-/**
- * Custom PushOperator type that properly handles array fields
- */
-export type MongoPushOperator<TSchema> = PushOperator<TSchema>;
-
-/**
- * Custom PullOperator type that properly handles array fields
- */
-export type MongoPullOperator<TSchema> = PullOperator<TSchema>;
-
-/**
- * Custom PullAllOperator type that properly handles array fields
- */
-export type MongoPullAllOperator<TSchema> = PullAllOperator<TSchema>;
-
 /**
  * Returns all dot-notation properties of a schema with their corresponding types.
  */
@@ -306,9 +290,9 @@ export interface MongoUpdateFilter<TSchema> {
   $addToSet?: SetFields<TSchema>;
   // biome-ignore lint/suspicious/noExplicitAny: MongoDB $pop operator works with any array type
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
-  $pull?: MongoPullOperator<TSchema>;
-  $push?: MongoPushOperator<TSchema>;
-  $pullAll?: MongoPullAllOperator<TSchema>;
+  $pull?: PullOperator<TSchema>;
+  $push?: PushOperator<TSchema>;
+  $pullAll?: PullAllOperator<TSchema>;
   $bit?: OnlyFieldsOfType<
     TSchema,
     NumericType | undefined,
@@ -323,29 +307,6 @@ export interface MongoUpdateFilter<TSchema> {
       }
   >;
 }
-
-// ============================================================================
-// Projection Types
-// ============================================================================
-/**
- * Result type after projection is applied
- */
-export type ProjectionResult<TSchema extends BaseSchema, TProjection> = TProjection extends Record<
-  string,
-  unknown
->
-  ? TProjection extends Record<string, 1 | true>
-    ? {
-        [K in keyof TProjection as TProjection[K] extends 1 | true
-          ? K
-          : never]: K extends keyof TSchema ? TSchema[K] : never;
-      } & {
-        _id: TSchema['_id'];
-      }
-    : TProjection extends Record<string, 0 | false>
-      ? Omit<TSchema, keyof TProjection>
-      : TSchema
-  : TSchema;
 
 // ============================================================================
 // Bulk Write Types
@@ -381,28 +342,6 @@ export type MongoBulkWriteOperation<TSchema extends BaseSchema> =
 // ============================================================================
 // Legacy/Compatibility Types
 // ============================================================================
-
-/**
- * Flatten nested object types for dot notation (legacy)
- */
-export type FlattenObject<T> = {
-  [K in Join<NestedPaths<T, []>, '.'>]: PropertyType<T, K>;
-};
-
-/**
- * Utility type to get the type of a nested property (legacy - kept for compatibility)
- */
-export type NestedPropertyType<T, P extends string> = PropertyType<T, P>;
-
-/**
- * Optional ID if ObjectId (legacy)
- */
-export type OptionalIdIfObjectId<TSchema> = TSchema extends { _id: infer I }
-  ? I extends ObjectId
-    ? Omit<TSchema, '_id'> & { _id?: I }
-    : TSchema
-  : TSchema;
-
 export interface BaseSchema {
   _id: ObjectId | number | string;
 }
@@ -435,10 +374,6 @@ export type RequireAtLeastOne<TObj, Keys extends keyof TObj = keyof TObj> = {
   [Key in Keys]-?: Partial<Pick<TObj, Exclude<Keys, Key>>> & Required<Pick<TObj, Key>>;
 }[Keys] &
   Pick<TObj, Exclude<keyof TObj, Keys>>;
-
-export function getIds(ids: Set<string> | readonly (ObjectId | string)[]): ObjectId[] {
-  return [...ids].map((id) => new ObjectId(id));
-}
 
 // ============================================================================
 // DeepPick Types
