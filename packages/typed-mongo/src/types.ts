@@ -1,10 +1,11 @@
 import type {
   AlternativeType,
   ArrayElement,
-  BitwiseFilter,
   BSONRegExp,
   BSONType,
   BSONTypeAlias,
+  Binary,
+  BitwiseFilter,
   DeleteManyModel,
   DeleteOneModel,
   Document,
@@ -21,10 +22,9 @@ import type {
   Timestamp,
   UpdateManyModel,
   UpdateOneModel,
-  Binary,
-} from "mongodb";
+} from 'mongodb';
 
-import { ObjectId } from "mongodb";
+import { ObjectId } from 'mongodb';
 // ============================================================================
 // Document Types
 // ============================================================================
@@ -34,24 +34,20 @@ import { ObjectId } from "mongodb";
  * _id is optional only for ObjectId type, required for string type
  */
 export type StrictOptionalId<TSchema> = TSchema extends { _id: ObjectId }
-  ? Omit<TSchema, "_id"> & { _id?: ObjectId }
+  ? Omit<TSchema, '_id'> & { _id?: ObjectId }
   : TSchema extends { _id: string }
-  ? TSchema // string _id is required
-  : TSchema & { _id?: string };
+    ? TSchema // string _id is required
+    : TSchema & { _id?: string };
 
 /**
  * Extract the _id type from a schema
  */
-export type ExtractIdType<TSchema> = TSchema extends { _id: infer IdType }
-  ? IdType
-  : string;
+export type ExtractIdType<TSchema> = TSchema extends { _id: infer IdType } ? IdType : string;
 
 /**
  * Check if a schema has ObjectId as _id type
  */
-export type HasObjectId<TSchema> = TSchema extends { _id: ObjectId }
-  ? true
-  : false;
+export type HasObjectId<TSchema> = TSchema extends { _id: ObjectId } ? true : false;
 
 /**
  * Recursively converts fields named `_id` from `string` to `ObjectId`.
@@ -59,67 +55,64 @@ export type HasObjectId<TSchema> = TSchema extends { _id: ObjectId }
 export type WithMongoId<T> = T extends (infer U)[]
   ? WithMongoId<U>[]
   : T extends Date
-  ? T
-  : T extends object
-  ? {
-      [K in keyof T]: K extends "_id"
-        ? ObjectId
-        : T[K] extends (infer V)[]
-        ? WithMongoId<V>[]
-        : T[K] extends object
-        ? WithMongoId<T[K]>
-        : T[K];
-    }
-  : T;
+    ? T
+    : T extends object
+      ? {
+          [K in keyof T]: K extends '_id'
+            ? ObjectId
+            : T[K] extends (infer V)[]
+              ? WithMongoId<V>[]
+              : T[K] extends object
+                ? WithMongoId<T[K]>
+                : T[K];
+        }
+      : T;
 
 // ============================================================================
 // Filter Types
 // ============================================================================
 
 // Forward declarations for types that will be defined in utils.ts
-export type NestedPaths<
-  Type,
-  Depth extends number[]
-> = Depth["length"] extends 6
+export type NestedPaths<Type, Depth extends number[]> = Depth['length'] extends 6
   ? []
   : Type extends
-      | Buffer
-      | Date
-      | RegExp
-      | Uint8Array
-      | boolean
-      | number
-      | string
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      | ((...args: any[]) => any)
-      | {
-          _bsontype: string;
-        }
-  ? []
-  : Type extends readonly (infer ArrayType)[]
-  ? // This returns the non-indexed dot-notation path: e.g. `foo.bar`
-    | [...NestedPaths<ArrayType, [...Depth, 1]>]
-      // This returns the array parent itself: e.g. `foo`
-      | []
-      // This returns the indexed dot-notation path: e.g. `foo.0.bar`
-      | [number, ...NestedPaths<ArrayType, [...Depth, 1]>]
-      // This returns the indexed element path: e.g. `foo.0`
-      | [number]
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Type extends Map<string, any>
-  ? [string]
-  : Type extends object
-  ? {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [Key in Extract<keyof Type, string>]: Type[Key] extends readonly any[]
-        ? [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] // child is not structured the same as the parent
-        : [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] | [Key];
-    }[Extract<keyof Type, string>]
-  : [];
+        | Buffer
+        | Date
+        | RegExp
+        | Uint8Array
+        | boolean
+        | number
+        | string
+        // biome-ignore lint/suspicious/noExplicitAny: MongoDB type system requires any for function types
+        | ((...args: any[]) => any)
+        | {
+            _bsontype: string;
+          }
+    ? []
+    : Type extends readonly (infer ArrayType)[]
+      ? // This returns the non-indexed dot-notation path: e.g. `foo.bar`
+          | [...NestedPaths<ArrayType, [...Depth, 1]>]
+          // This returns the array parent itself: e.g. `foo`
+          | []
+          // This returns the indexed dot-notation path: e.g. `foo.0.bar`
+          | [number, ...NestedPaths<ArrayType, [...Depth, 1]>]
+          // This returns the indexed element path: e.g. `foo.0`
+          | [number]
+      : // biome-ignore lint/suspicious/noExplicitAny: MongoDB type system requires any for Map types
+        Type extends Map<string, any>
+        ? [string]
+        : Type extends object
+          ? {
+              // biome-ignore lint/suspicious/noExplicitAny: MongoDB type system requires any for array types
+              [Key in Extract<keyof Type, string>]: Type[Key] extends readonly any[]
+                ? [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] // child is not structured the same as the parent
+                : [Key, ...NestedPaths<Type[Key], [...Depth, 1]>] | [Key];
+            }[Extract<keyof Type, string>]
+          : [];
 
 export type PropertyNestedType<
   Type,
-  Property extends string
+  Property extends string,
 > = Property extends `${infer Key}.${infer Rest}`
   ? Key extends `${number}`
     ? // indexed array nested properties
@@ -127,43 +120,39 @@ export type PropertyNestedType<
       ? PropertyType<ArrayType, Rest>
       : unknown
     : // object nested properties & non-indexed array nested properties
-    Key extends keyof Type
-    ? Type[Key] extends Map<string, infer MapType>
-      ? MapType
-      : PropertyType<NonNullable<Type[Key]>, Rest>
-    : unknown
+      Key extends keyof Type
+      ? Type[Key] extends Map<string, infer MapType>
+        ? MapType
+        : PropertyType<NonNullable<Type[Key]>, Rest>
+      : unknown
   : unknown;
 
-export type PropertyType<
-  Type,
-  Property extends string
-> = string extends Property
+export type PropertyType<Type, Property extends string> = string extends Property
   ? unknown
   : // object properties
-  Property extends keyof Type
-  ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Type extends Record<string, any>
-    ? Property extends `${string}.${string}`
-      ? PropertyNestedType<NonNullable<Type>, Property>
+    Property extends keyof Type
+    ? // biome-ignore lint/suspicious/noExplicitAny: MongoDB type system requires any for Record types
+      Type extends Record<string, any>
+      ? Property extends `${string}.${string}`
+        ? PropertyNestedType<NonNullable<Type>, Property>
+        : Type[Property]
       : Type[Property]
-    : Type[Property]
-  : Type extends readonly (infer ArrayType)[]
-  ? // indexed array properties
-    Property extends `${number}`
-    ? ArrayType
-    : // non-indexed array properties
-    Property extends keyof ArrayType
-    ? PropertyType<ArrayType, Property>
-    : PropertyNestedType<NonNullable<Type>, Property>
-  : PropertyNestedType<NonNullable<Type>, Property>;
+    : Type extends readonly (infer ArrayType)[]
+      ? // indexed array properties
+        Property extends `${number}`
+        ? ArrayType
+        : // non-indexed array properties
+          Property extends keyof ArrayType
+          ? PropertyType<ArrayType, Property>
+          : PropertyNestedType<NonNullable<Type>, Property>
+      : PropertyNestedType<NonNullable<Type>, Property>;
 
 export type MongoFilter<TSchema> =
   | Partial<TSchema>
-  | (MongoFilterConditions<TSchema> &
-      MongoRootFilterOperators<TSchema>);
+  | (MongoFilterConditions<TSchema> & MongoRootFilterOperators<TSchema>);
 
 export type MongoFilterConditions<TSchema> = {
-  [Property in Join<NestedPaths<TSchema, []>, ".">]?: MongoCondition<
+  [Property in Join<NestedPaths<TSchema, []>, '.'>]?: MongoCondition<
     PropertyType<TSchema, Property>
   >;
 } & {
@@ -174,6 +163,7 @@ export interface MongoRootFilterOperators<TSchema> {
   $and?: MongoFilter<TSchema>[];
   $nor?: MongoFilter<TSchema>[];
   $or?: MongoFilter<TSchema>[];
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $expr operator accepts any expression
   $expr?: Record<string, any>;
   $text?: {
     $search: string;
@@ -203,7 +193,9 @@ export interface MongoFilterOperators<TValue> {
     : MongoFilterOperators<TValue>;
   $exists?: boolean;
   $type?: BSONType | BSONTypeAlias;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $expr operator accepts any expression
   $expr?: Record<string, any>;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $jsonSchema accepts any JSON schema
   $jsonSchema?: Record<string, any>;
   $mod?: TValue extends number ? [number, number] : never;
   $regex?: TValue extends string ? BSONRegExp | RegExp | string : never;
@@ -215,8 +207,11 @@ export interface MongoFilterOperators<TValue> {
   $near?: Document;
   $nearSphere?: Document;
   $maxDistance?: number;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $all operator works with any array type
   $all?: TValue extends readonly any[] ? readonly any[] : never;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $elemMatch operator works with any array type
   $elemMatch?: TValue extends readonly any[] ? Document : never;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $size operator works with any array type
   $size?: TValue extends readonly any[] ? number : never;
   $bitsAllClear?: BitwiseFilter;
   $bitsAllSet?: BitwiseFilter;
@@ -248,10 +243,7 @@ export type MongoPullAllOperator<TSchema> = PullAllOperator<TSchema>;
  * Returns all dot-notation properties of a schema with their corresponding types.
  */
 export type MongoAllProperties<TSchema> = {
-  [Property in Join<NestedPaths<TSchema, []>, ".">]?: PropertyType<
-    TSchema,
-    Property
-  >;
+  [Property in Join<NestedPaths<TSchema, []>, '.'>]?: PropertyType<TSchema, Property>;
 } & {
   [K in keyof TSchema]?: TSchema[K];
 };
@@ -261,13 +253,11 @@ export type MongoAllProperties<TSchema> = {
  */
 export type MongoArrayElementsProperties<TSchema> = {
   [Property in `${Extract<
+    // biome-ignore lint/suspicious/noExplicitAny: MongoDB array operations require any[] type
     KeysOfAType<MongoAllProperties<TSchema>, any[]>,
     string
-  >}.$${"" | `[${string}]`}`]?: ArrayElement<
-    PropertyType<
-      TSchema,
-      Property extends `${infer Key}.$${string}` ? Key : never
-    >
+  >}.$${'' | `[${string}]`}`]?: ArrayElement<
+    PropertyType<TSchema, Property extends `${infer Key}.$${string}` ? Key : never>
   >;
 };
 
@@ -276,13 +266,12 @@ export type MongoArrayElementsProperties<TSchema> = {
  */
 export type MongoArrayNestedProperties<TSchema> = {
   [Property in `${Extract<
+    // biome-ignore lint/suspicious/noExplicitAny: MongoDB nested array operations require Record<string, any>[] type
     KeysOfAType<MongoAllProperties<TSchema>, Record<string, any>[]>,
     string
-  >}.$${"" | `[${string}]`}.${string}`]?: PropertyType<
+  >}.$${'' | `[${string}]`}.${string}`]?: PropertyType<
     TSchema,
-    Property extends `${infer Base}.$${string}.${infer Rest}`
-      ? `${Base}.0.${Rest}`
-      : never
+    Property extends `${infer Base}.$${string}.${infer Rest}` ? `${Base}.0.${Rest}` : never
   >;
 };
 
@@ -302,7 +291,7 @@ export interface MongoUpdateFilter<TSchema> {
     Date | Timestamp,
     | true
     | {
-        $type: "date" | "timestamp";
+        $type: 'date' | 'timestamp';
       }
   >;
   $inc?: OnlyFieldsOfType<TSchema, NumericType | undefined>;
@@ -312,8 +301,10 @@ export interface MongoUpdateFilter<TSchema> {
   $rename?: Record<string, string>;
   $set?: MongoMatchKeysAndValues<TSchema>;
   $setOnInsert?: MongoMatchKeysAndValues<TSchema>;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $unset operator works with any field type
   $unset?: OnlyFieldsOfType<TSchema, any, '' | 1 | true>;
   $addToSet?: SetFields<TSchema>;
+  // biome-ignore lint/suspicious/noExplicitAny: MongoDB $pop operator works with any array type
   $pop?: OnlyFieldsOfType<TSchema, readonly any[], -1 | 1>;
   $pull?: MongoPullOperator<TSchema>;
   $push?: MongoPushOperator<TSchema>;
@@ -347,15 +338,13 @@ export type ProjectionResult<TSchema extends BaseSchema, TProjection> = TProject
     ? {
         [K in keyof TProjection as TProjection[K] extends 1 | true
           ? K
-          : never]: K extends keyof TSchema
-          ? TSchema[K]
-          : never;
+          : never]: K extends keyof TSchema ? TSchema[K] : never;
       } & {
-        _id: TSchema["_id"];
+        _id: TSchema['_id'];
       }
     : TProjection extends Record<string, 0 | false>
-    ? Omit<TSchema, keyof TProjection>
-    : TSchema
+      ? Omit<TSchema, keyof TProjection>
+      : TSchema
   : TSchema;
 
 // ============================================================================
@@ -397,7 +386,7 @@ export type MongoBulkWriteOperation<TSchema extends BaseSchema> =
  * Flatten nested object types for dot notation (legacy)
  */
 export type FlattenObject<T> = {
-  [K in Join<NestedPaths<T, []>, ".">]: PropertyType<T, K>;
+  [K in Join<NestedPaths<T, []>, '.'>]: PropertyType<T, K>;
 };
 
 /**
@@ -410,7 +399,7 @@ export type NestedPropertyType<T, P extends string> = PropertyType<T, P>;
  */
 export type OptionalIdIfObjectId<TSchema> = TSchema extends { _id: infer I }
   ? I extends ObjectId
-    ? Omit<TSchema, "_id"> & { _id?: I }
+    ? Omit<TSchema, '_id'> & { _id?: I }
     : TSchema
   : TSchema;
 
@@ -424,40 +413,30 @@ export type Flatten<Type extends object> = Identity<{
   [Key in keyof Type]: Type[Key];
 }>;
 
-type FilterProperties<TObject, TValue> = Pick<
-  TObject,
-  KeysOfAType<TObject, TValue>
->;
+type FilterProperties<TObject, TValue> = Pick<TObject, KeysOfAType<TObject, TValue>>;
 
 export type ProjectionType<
   TSchema extends BaseSchema,
-  Projection extends
-    | Partial<Record<Join<NestedPaths<TSchema, []>, ".">, number>>
-    | undefined
+  Projection extends Partial<Record<Join<NestedPaths<TSchema, []>, '.'>, number>> | undefined,
 > = undefined extends Projection
   ? TSchema
   : keyof FilterProperties<Projection, 0 | 1> extends never
-  ? DeepPick<TSchema, "_id" | (string & keyof Projection)>
-  : keyof FilterProperties<Projection, 1> extends never
-  ? Omit<TSchema, keyof FilterProperties<Projection, 0>>
-  : Omit<
-      DeepPick<TSchema, "_id" | (string & keyof Projection)>,
-      keyof FilterProperties<Projection, 0>
-    >;
+    ? DeepPick<TSchema, '_id' | (string & keyof Projection)>
+    : keyof FilterProperties<Projection, 1> extends never
+      ? Omit<TSchema, keyof FilterProperties<Projection, 0>>
+      : Omit<
+          DeepPick<TSchema, '_id' | (string & keyof Projection)>,
+          keyof FilterProperties<Projection, 0>
+        >;
 
-export type Projection<TSchema> = Partial<
-  Record<Join<NestedPaths<TSchema, []>, ".">, number>
->;
+export type Projection<TSchema> = Partial<Record<Join<NestedPaths<TSchema, []>, '.'>, number>>;
 
 export type RequireAtLeastOne<TObj, Keys extends keyof TObj = keyof TObj> = {
-  [Key in Keys]-?: Partial<Pick<TObj, Exclude<Keys, Key>>> &
-    Required<Pick<TObj, Key>>;
+  [Key in Keys]-?: Partial<Pick<TObj, Exclude<Keys, Key>>> & Required<Pick<TObj, Key>>;
 }[Keys] &
   Pick<TObj, Exclude<keyof TObj, Keys>>;
 
-export function getIds(
-  ids: Set<string> | readonly (ObjectId | string)[]
-): ObjectId[] {
+export function getIds(ids: Set<string> | readonly (ObjectId | string)[]): ObjectId[] {
   return [...ids].map((id) => new ObjectId(id));
 }
 
@@ -466,12 +445,10 @@ export function getIds(
 // ============================================================================
 type UnionKeyOf<Type> = Type extends infer T ? keyof T : never;
 
-type HeadPaths<Paths extends string> = Paths extends `${infer Head}.${string}`
-  ? Head
-  : Paths;
+type HeadPaths<Paths extends string> = Paths extends `${infer Head}.${string}` ? Head : Paths;
 
 type InnerKeys<HeadKey extends string, Paths extends string> = [
-  Extract<Paths, `${HeadKey}.${string}`>
+  Extract<Paths, `${HeadKey}.${string}`>,
 ] extends [`${HeadKey}.${infer RestKey}`]
   ? RestKey
   : never;
@@ -492,22 +469,15 @@ export type ObjectType<Properties> = Flatten<
 >;
 
 type InnerPick<Type, Paths extends string> = ObjectType<{
-  [HeadKey in UnionKeyOf<Type>]: DeepPick<
-    Type[HeadKey],
-    InnerKeys<HeadKey, Paths>
-  >;
+  [HeadKey in UnionKeyOf<Type>]: DeepPick<Type[HeadKey], InnerKeys<HeadKey, Paths>>;
 }>;
 
 type ArrayItemKeys<Paths extends string> = InnerKeys<`${number}`, Paths>;
 
 type Primitive = boolean | number | string | symbol | null | undefined;
 
-export type DeepPick<Type, Paths extends string> = Type extends
-  | Binary
-  | Date
-  | ObjectId
-  | Primitive
+export type DeepPick<Type, Paths extends string> = Type extends Binary | Date | ObjectId | Primitive
   ? Type
   : Type extends (infer ArrayItem)[]
-  ? DeepPick<ArrayItem, ArrayItemKeys<Paths>>[]
-  : Pick<InnerPick<Type, Paths>, HeadPaths<Paths> & UnionKeyOf<Type>>;
+    ? DeepPick<ArrayItem, ArrayItemKeys<Paths>>[]
+    : Pick<InnerPick<Type, Paths>, HeadPaths<Paths> & UnionKeyOf<Type>>;

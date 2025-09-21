@@ -1,12 +1,12 @@
+import { type BulkWriteResult, ObjectId } from 'mongodb';
 /**
  * Type-only tests for typed-mongo
  * This file is tested with: pnpm test --typecheck
  */
-import { describe, test, expectTypeOf } from "vitest";
-import { type BulkWriteResult, ObjectId } from "mongodb";
-import { Client } from "../src/index.js";
-import type { Model } from "../src/model.js";
-import { testDbManager } from "./setup/mongodb-memory-server.js";
+import { describe, expectTypeOf, test } from 'vitest';
+import { Client } from '../src/index.js';
+import type { Model } from '../src/model.js';
+import { testDbManager } from './setup/mongodb-memory-server.js';
 
 // Test schema types
 type UserSchema = {
@@ -55,22 +55,22 @@ type PostSchema = {
 const testDb = testDbManager.getDb();
 const client = Client.initialize(testDb);
 
-const User = client.model<UserSchema>("users");
-const Post = client.model<PostSchema>("posts");
+const User = client.model<UserSchema>('users');
+const Post = client.model<PostSchema>('posts');
 
-describe("Type checking tests", () => {
-  test("Model type inference", () => {
+describe('Type checking tests', () => {
+  test('Model type inference', () => {
     expectTypeOf(User).toEqualTypeOf<Model<UserSchema>>();
     expectTypeOf(Post).toEqualTypeOf<Model<PostSchema>>();
   });
 
-  describe("Find operations", () => {
-    test("Check return types", async () => {
-      const userResult = await User.findOne({ name: "John" });
+  describe('Find operations', () => {
+    test('Check return types', async () => {
+      const userResult = await User.findOne({ name: 'John' });
       expectTypeOf(userResult).toEqualTypeOf<UserSchema | null>();
 
       const cursor = User.find({});
-      expectTypeOf(cursor).toHaveProperty("toArray");
+      expectTypeOf(cursor).toHaveProperty('toArray');
       const arrayResult = await cursor.toArray();
       expectTypeOf(arrayResult).toEqualTypeOf<UserSchema[]>();
 
@@ -78,10 +78,10 @@ describe("Type checking tests", () => {
       expectTypeOf(usersResult).toEqualTypeOf<UserSchema[]>();
     });
 
-    test("Check projection", async () => {
+    test('Check projection', async () => {
       const projectedUserResult = await User.findOne(
-        { name: "John" },
-        { projection: { name: 1, profile: 1, "settings.notifications": 1 } }
+        { name: 'John' },
+        { projection: { name: 1, profile: 1, 'settings.notifications': 1 } },
       );
       expectTypeOf(projectedUserResult).toEqualTypeOf<{
         _id: string;
@@ -96,8 +96,8 @@ describe("Type checking tests", () => {
       } | null>();
 
       const projectedUsersResult = await User.findMany(
-        { name: "John" },
-        { projection: { _id: 1, name: 1 } }
+        { name: 'John' },
+        { projection: { _id: 1, name: 1 } },
       );
       expectTypeOf(projectedUsersResult).toEqualTypeOf<
         {
@@ -107,29 +107,29 @@ describe("Type checking tests", () => {
       >();
     });
 
-    test("Check filter", async () => {
+    test('Check filter', async () => {
       const _ = await User.findOne({
-        name: "John",
+        name: 'John',
         age: {
           $gt: 20,
           $lt: 40,
         },
-        email: "john@example.com",
-        tags: "user",
+        email: 'john@example.com',
+        tags: 'user',
         scores: { $in: [100, 200] },
-        "profile.bio": "John's bio",
+        'profile.bio': "John's bio",
       });
     });
 
-    test("Filter type errors", async () => {
+    test('Filter type errors', async () => {
       // @ts-expect-error - non-existent field
-      User.findOne({ nonExistentField: "value" });
+      User.findOne({ nonExistentField: 'value' });
 
       // @ts-expect-error - wrong type for 'name'
       User.findOne({ name: 10 });
 
       // @ts-expect-error - wrong type for 'age'
-      User.findOne({ age: "thirty" });
+      User.findOne({ age: 'thirty' });
 
       // @ts-expect-error - wrong type for 'email'
       User.findOne({ email: 123 });
@@ -138,18 +138,18 @@ describe("Type checking tests", () => {
       User.findOne({ tags: 123 });
 
       // @ts-expect-error - wrong type for 'scores'
-      User.findOne({ scores: "100" });
+      User.findOne({ scores: '100' });
 
       // @ts-expect-error - non-existent field
-      User.findOne({ "profile.nonExistentField": "" });
+      User.findOne({ 'profile.nonExistentField': '' });
 
       // @ts-expect-error - wrong type for 'profile.bio'
-      User.findOne({ "profile.bio": 123 });
+      User.findOne({ 'profile.bio': 123 });
     });
   });
 
-  describe("Insert operations", () => {
-    test("Check return types", async () => {
+  describe('Insert operations', () => {
+    test('Check return types', async () => {
       type UserInsertDoc = Parameters<typeof User.insertOne>[0];
 
       // Required fields must be present
@@ -177,8 +177,8 @@ describe("Type checking tests", () => {
 
       // Valid insertOne
       const userResult = await User.insertOne({
-        _id: "user1",
-        name: "John",
+        _id: 'user1',
+        name: 'John',
         age: 30,
       });
       expectTypeOf(userResult).toEqualTypeOf<{
@@ -188,10 +188,10 @@ describe("Type checking tests", () => {
 
       // Valid with optional fields
       const postResult = await Post.insertOne({
-        title: "Jane",
-        content: "Jane",
-        authorId: "user1",
-        tags: ["user", "admin"],
+        title: 'Jane',
+        content: 'Jane',
+        authorId: 'user1',
+        tags: ['user', 'admin'],
         likes: 0,
         comments: [],
         published: false,
@@ -205,10 +205,10 @@ describe("Type checking tests", () => {
       // Valid with ObjectId _id
       const postResult2 = await Post.insertOne({
         _id: new ObjectId(),
-        title: "Jane",
-        content: "Jane",
-        authorId: "user1",
-        tags: ["user", "admin"],
+        title: 'Jane',
+        content: 'Jane',
+        authorId: 'user1',
+        tags: ['user', 'admin'],
         likes: 0,
         comments: [],
         published: false,
@@ -221,13 +221,13 @@ describe("Type checking tests", () => {
 
       const usersResult = await User.insertMany([
         {
-          _id: "user1",
-          name: "John",
+          _id: 'user1',
+          name: 'John',
           age: 30,
         },
         {
-          _id: "user2",
-          name: "Jane",
+          _id: 'user2',
+          name: 'Jane',
           age: 30,
         },
       ]);
@@ -240,34 +240,31 @@ describe("Type checking tests", () => {
       }>();
     });
 
-    test("Insert type errors", async () => {
+    test('Insert type errors', async () => {
       // @ts-expect-error - _id is required if _id is not ObjectId
       User.insertOne({
-        name: "John",
+        name: 'John',
         age: 30,
       });
 
       // @ts-expect-error - missing required field
       User.insertOne({
-        _id: "user1",
-        name: "John",
+        _id: 'user1',
+        name: 'John',
       });
 
       User.insertOne({
-        _id: "user1",
-        name: "John",
+        _id: 'user1',
+        name: 'John',
         // @ts-expect-error - wrong type for age
-        age: "thirty",
+        age: 'thirty',
       });
     });
   });
 
-  describe("Update operations", () => {
-    test("Check return types", async () => {
-      const updateOneResult = await User.updateOne(
-        { name: "John" },
-        { $set: { age: 31 } }
-      );
+  describe('Update operations', () => {
+    test('Check return types', async () => {
+      const updateOneResult = await User.updateOne({ name: 'John' }, { $set: { age: 31 } });
       expectTypeOf(updateOneResult).toEqualTypeOf<{
         acknowledged: boolean;
         matchedCount: number;
@@ -276,10 +273,7 @@ describe("Type checking tests", () => {
         upsertedId: string | null;
       }>();
 
-      const updateManyResult = await User.updateMany(
-        { name: "John" },
-        { $set: { age: 31 } }
-      );
+      const updateManyResult = await User.updateMany({ name: 'John' }, { $set: { age: 31 } });
       expectTypeOf(updateManyResult).toEqualTypeOf<{
         acknowledged: boolean;
         matchedCount: number;
@@ -289,17 +283,17 @@ describe("Type checking tests", () => {
       }>();
     });
 
-    test("Check findOneAndUpdate return types", async () => {
+    test('Check findOneAndUpdate return types', async () => {
       const findOneAndUpdateResult = await User.findOneAndUpdate(
-        { name: "John" },
-        { $set: { age: 31 } }
+        { name: 'John' },
+        { $set: { age: 31 } },
       );
       expectTypeOf(findOneAndUpdateResult).toEqualTypeOf<UserSchema | null>();
 
       const findOneAndUpdateResult2 = await User.findOneAndUpdate(
-        { name: "John" },
+        { name: 'John' },
         { $set: { age: 31 } },
-        { projection: { name: 1 } }
+        { projection: { name: 1 } },
       );
       expectTypeOf(findOneAndUpdateResult2).toEqualTypeOf<{
         _id: string;
@@ -307,15 +301,15 @@ describe("Type checking tests", () => {
       } | null>();
     });
 
-    test("Check UpdateFilter", async () => {
+    test('Check UpdateFilter', async () => {
       await User.updateOne(
-        { name: "John" },
+        { name: 'John' },
         {
           $set: {
-            name: "Jane",
+            name: 'Jane',
             age: 31,
-            email: "jane@example.com",
-            tags: ["user", "admin"],
+            email: 'jane@example.com',
+            tags: ['user', 'admin'],
             scores: [100, 200],
             profile: {
               bio: "Jane's bio",
@@ -325,14 +319,14 @@ describe("Type checking tests", () => {
             },
           },
           $unset: {
-            email: "",
+            email: '',
           },
           $push: {
-            tags: "new-tag",
+            tags: 'new-tag',
             scores: 300,
           },
           $pull: {
-            tags: "old-tag",
+            tags: 'old-tag',
           },
           $pullAll: {
             scores: [100, 200],
@@ -341,63 +335,63 @@ describe("Type checking tests", () => {
             tags: 1,
           },
           $rename: {
-            age: "yearsOld",
+            age: 'yearsOld',
           },
           $currentDate: {
             lastLogin: true,
           },
           $addToSet: {
-            tags: "new-tag",
+            tags: 'new-tag',
           },
-        }
+        },
       );
     });
 
-    test("Check UpdateFilter type errors", async () => {
+    test('Check UpdateFilter type errors', async () => {
       // @ts-expect-error - wrong type for _id
-      User.updateOne({ name: "John" }, { $set: { name: 31 } });
+      User.updateOne({ name: 'John' }, { $set: { name: 31 } });
 
       // @ts-expect-error - wrong type for $push operator
-      User.updateOne({ name: "John" }, { $push: { tags: 123 } });
+      User.updateOne({ name: 'John' }, { $push: { tags: 123 } });
 
       // @ts-expect-error - wrong type for $pullAll operator
-      User.updateOne({ name: "John" }, { $pullAll: { tags: [123] } });
+      User.updateOne({ name: 'John' }, { $pullAll: { tags: [123] } });
 
       // @ts-expect-error - wrong type for $pop operator
-      User.updateOne({ name: "John" }, { $pop: { tags: "1" } });
+      User.updateOne({ name: 'John' }, { $pop: { tags: '1' } });
 
       // @ts-expect-error - wrong type for $rename operator
-      User.updateOne({ name: "John" }, { $rename: { age: 123 } });
+      User.updateOne({ name: 'John' }, { $rename: { age: 123 } });
 
       // @ts-expect-error - wrong type for $currentDate operator
-      User.updateOne({ name: "John" }, { $currentDate: { lastLogin: "date" } });
+      User.updateOne({ name: 'John' }, { $currentDate: { lastLogin: 'date' } });
     });
   });
 
-  describe("Delete operations", () => {
-    test("Check return types", async () => {
-      const deleteOneResult = await User.deleteOne({ name: "John" });
+  describe('Delete operations', () => {
+    test('Check return types', async () => {
+      const deleteOneResult = await User.deleteOne({ name: 'John' });
       expectTypeOf(deleteOneResult).toEqualTypeOf<{
         acknowledged: boolean;
         deletedCount: number;
       }>();
 
-      const deleteManyResult = await User.deleteMany({ name: "John" });
+      const deleteManyResult = await User.deleteMany({ name: 'John' });
       expectTypeOf(deleteManyResult).toEqualTypeOf<{
         acknowledged: boolean;
         deletedCount: number;
       }>();
     });
 
-    test("Check findOneAndDelete return types", async () => {
+    test('Check findOneAndDelete return types', async () => {
       const findOneAndDeleteResult = await User.findOneAndDelete({
-        name: "John",
+        name: 'John',
       });
       expectTypeOf(findOneAndDeleteResult).toEqualTypeOf<UserSchema | null>();
 
       const findOneAndDeleteResult2 = await User.findOneAndDelete(
-        { name: "John" },
-        { projection: { name: 1 } }
+        { name: 'John' },
+        { projection: { name: 1 } },
       );
       expectTypeOf(findOneAndDeleteResult2).toEqualTypeOf<{
         _id: string;
@@ -406,37 +400,37 @@ describe("Type checking tests", () => {
     });
   });
 
-  describe("Bulk write operations", () => {
-    test("Check aggregate return types", async () => {
+  describe('Bulk write operations', () => {
+    test('Check aggregate return types', async () => {
       const aggregateResult = await User.bulkWrite([
         {
           updateOne: {
-            filter: { name: "John" },
+            filter: { name: 'John' },
             update: { $set: { age: 31 } },
           },
         },
         {
           updateMany: {
-            filter: { name: "John" },
+            filter: { name: 'John' },
             update: { $set: { age: 31 } },
           },
         },
         {
           deleteOne: {
-            filter: { name: "John" },
+            filter: { name: 'John' },
           },
         },
 
         {
           deleteMany: {
-            filter: { name: "John" },
+            filter: { name: 'John' },
           },
         },
 
         {
           replaceOne: {
-            filter: { name: "John" },
-            replacement: { name: "John", age: 31 },
+            filter: { name: 'John' },
+            replacement: { name: 'John', age: 31 },
           },
         },
       ]);
@@ -444,31 +438,31 @@ describe("Type checking tests", () => {
     });
   });
 
-  describe("Count Documents operations", () => {
-    test("Check countDocuments return types", async () => {
-      const countDocumentsResult = await User.countDocuments({ name: "John" });
+  describe('Count Documents operations', () => {
+    test('Check countDocuments return types', async () => {
+      const countDocumentsResult = await User.countDocuments({ name: 'John' });
       expectTypeOf(countDocumentsResult).toEqualTypeOf<number>();
     });
   });
 
-  describe("Estimated Document Count operations", () => {
-    test("Check estimatedDocumentCount return types", async () => {
+  describe('Estimated Document Count operations', () => {
+    test('Check estimatedDocumentCount return types', async () => {
       const estimatedDocumentCountResult = await User.estimatedDocumentCount();
       expectTypeOf(estimatedDocumentCountResult).toEqualTypeOf<number>();
     });
   });
 
-  describe("Distinct operations", () => {
-    test("Check distinct return types", async () => {
-      const distinctResult = await User.distinct("name");
+  describe('Distinct operations', () => {
+    test('Check distinct return types', async () => {
+      const distinctResult = await User.distinct('name');
       expectTypeOf(distinctResult).toEqualTypeOf<string[]>();
     });
   });
 
-  describe("Aggregate operations", () => {
-    test("Check aggregate return types", async () => {
+  describe('Aggregate operations', () => {
+    test('Check aggregate return types', async () => {
       const aggregateResult = await User.aggregate<UserSchema>([
-        { $match: { name: "John" } },
+        { $match: { name: 'John' } },
       ]).toArray();
       expectTypeOf(aggregateResult).toEqualTypeOf<UserSchema[]>();
 
@@ -476,14 +470,12 @@ describe("Type checking tests", () => {
         _id: string;
         count: number;
       }>([
-        { $group: { _id: "$name", count: { $sum: 1 } } },
+        { $group: { _id: '$name', count: { $sum: 1 } } },
         { $limit: 10 },
         { $skip: 0 },
         { $sort: { count: -1 } },
       ]).toArray();
-      expectTypeOf(aggregateResult2).toEqualTypeOf<
-        { _id: string; count: number }[]
-      >();
+      expectTypeOf(aggregateResult2).toEqualTypeOf<{ _id: string; count: number }[]>();
     });
   });
 });

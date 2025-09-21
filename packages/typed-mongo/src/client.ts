@@ -10,7 +10,7 @@ export class Client {
 
   constructor(
     private db: Db,
-    mongoClient?: MongoClient
+    mongoClient?: MongoClient,
   ) {
     this.mongoClient = mongoClient;
   }
@@ -18,19 +18,14 @@ export class Client {
   /**
    * Initialize client with MongoDB database connection
    */
-  static initialize(
-    db: Db,
-    mongoClient?: MongoClient
-  ): Client {
+  static initialize(db: Db, mongoClient?: MongoClient): Client {
     return new Client(db, mongoClient);
   }
 
   /**
    * Create a model with schema and adapter
    */
-  model<TSchema extends BaseSchema>(
-    collectionName: string,
-  ): Model<TSchema> {
+  model<TSchema extends BaseSchema>(collectionName: string): Model<TSchema> {
     return new Model(this.db, collectionName);
   }
 
@@ -40,7 +35,6 @@ export class Client {
   getDb(): Db {
     return this.db;
   }
-
 
   /**
    * Close the database connection
