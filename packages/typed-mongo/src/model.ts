@@ -10,7 +10,6 @@ import type {
   DeleteOptions,
   DeleteResult,
   DistinctOptions,
-  Document,
   EstimatedDocumentCountOptions,
   Filter,
   FindCursor,

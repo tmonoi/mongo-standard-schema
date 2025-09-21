@@ -3,7 +3,7 @@ import { Model } from './model.js';
 import type { BaseSchema } from './types.js';
 
 /**
- * Main client class for safe-mongo
+ * Main client class for typed-mongo
  */
 export class Client {
   private mongoClient: MongoClient | undefined;
